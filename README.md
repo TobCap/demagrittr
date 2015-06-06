@@ -24,8 +24,8 @@ library("demagrittr")
 demagrittr(x %>% f %>% g %>% h)
 
 # call object can be treated
-expr <- quote(x %>% f %>% g %%> h)
-demagritr(expr)
+expr <- quote(x %>% f %>% g %>% h)
+demagrittr(expr)
 
 # compile and evaluate
 demagrittr(1:10 %>% sum %>% log %>% sin, eval_ = TRUE)
@@ -36,6 +36,7 @@ demagrittr(1:10 %>% sum %>% log %>% sin, eval_ = TRUE)
 ``` r
 expr <- quote(1:10 %>% sum %>% log %>% sin)
 library(microbenchmark)
+library(magrittr)
 microbenchmark("%>%" = eval(expr), demagrittr = eval(demagrittr(expr)))
 # Unit: microseconds
 #        expr     min       lq     mean   median       uq     max neval
@@ -54,7 +55,7 @@ identical(eval(expr), eval(expr2))
 ```
 
 ## Not supported 
-* control visibility of the result of a last function
+* control visibility of a result of the last function
  (pringint the result or not)
 
 ## ToDo
