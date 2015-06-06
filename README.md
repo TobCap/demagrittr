@@ -1,12 +1,12 @@
 # demagrittr
 
 ## What is this package?
-demagrittr() converts magrittr's syntax to eager evaluation syntax whose 
-advantages are:
+demagrittr() converts magrittr's syntax to eager evaluation syntax for
+the purpose of: 
 
-+ easy to read
-+ easy to debug
-+ run-time reduction (if you heavily use `%>%` inside a loop)
++ understanding quite complicated and nested piped sentenses
++ debugging when an error occurs
++ run-time reduction (if `%>%` is heavily used inside a long loop)
 
 This is experimental and not fully tested, so I would be glad
 if you could inform me of any misunderstandings or mistakes.  
@@ -20,7 +20,7 @@ library("demagrittr")
 
 ## Usage
 ``` r
-# directly passing 
+# direct passing 
 demagrittr(x %>% f %>% g %>% h)
 
 # call object can be treated
@@ -54,7 +54,7 @@ identical(eval(expr), eval(expr2))
 ```
 
 ## Not supported 
-* visibility of the result of a last function
+* control visibility of the result of a last function
  (pringint the result or not)
 
 ## ToDo
