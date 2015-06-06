@@ -34,9 +34,10 @@ demagrittr(1:10 %>% sum %>% log %>% sin, eval_ = TRUE)
 
 # benchmarking
 ``` r
-expr <- quote(1:10 %>% sum %>% log %>% sin)
 library(microbenchmark)
 library(magrittr)
+
+expr <- quote(1:10 %>% sum %>% log %>% sin)
 microbenchmark("%>%" = eval(expr), demagrittr = eval(demagrittr(expr)))
 # Unit: microseconds
 #        expr     min       lq     mean   median       uq     max neval
