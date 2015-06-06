@@ -1,7 +1,12 @@
-#' decompile magrittr's syntax to normal R's syntax
+#' Decompile magrittr's syntax to normal R's syntax
+#' @description Semantics of \code{\%>\%} is eager evaluation, the example of magrittr
+#'  is not accurate. \code{x \%>\% f} is not equivalent to \code{f(x)} but equals to
+#'  \code{{tmp <- x; f(tmp)}} or \code{{force(x); f(x)}}. demagrittr() converts magrittr's syntax to such eager
+#'  evaluation.
 #'
 #' @param expr_ expression with magrittr functions such as "\%>\%"
 #' @param eval_ evaluate the result if value is TRUE
+#'
 #' @examples
 #' demagrittr(x %>% f)
 #' demagrittr(x %>% f(y))
@@ -93,10 +98,10 @@ demagrittr <- (function() {
 
       lang <-
         switch(as.character(l[[1]]$op)
-               , "%T>%" = get_rhs_mod(direct_dot_pos, rhs_, sym)
-               , "%$%" = call("<-", sym, call("with", sym, rhs_))
-               , call("<-", sym, get_rhs_mod(direct_dot_pos, rhs_, sym))
-               # last part is a default value for "%>%" and "%<>%"
+          , "%T>%" = get_rhs_mod(direct_dot_pos, rhs_, sym)
+          , "%$%" = call("<-", sym, call("with", sym, rhs_))
+          , call("<-", sym, get_rhs_mod(direct_dot_pos, rhs_, sym))
+          # last part is a default value for "%>%" and "%<>%"
         )
 
       # first assignment

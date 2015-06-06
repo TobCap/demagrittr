@@ -43,7 +43,7 @@ testthat::test_that("equiv value", {
       multiply_by(5) %>%
       add(5)         %>%
       {
-        cat("Mean:", mean(.), "Variance:", var(.), "\n")
+        #cat("Mean:", mean(.), "Variance:", var(.), "\n")
         head(.)
       }
   })
@@ -53,7 +53,7 @@ testthat::test_that("equiv value", {
     set.seed(1)
     rnorm(100) %>% `*`(5) %>% `+`(5) %>%
     {
-      cat("Mean:", mean(.), "Variance:", var(.),  "\n")
+      #cat("Mean:", mean(.), "Variance:", var(.),  "\n")
       head(.)
     }
   })

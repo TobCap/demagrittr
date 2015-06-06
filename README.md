@@ -53,9 +53,9 @@ identical(eval(expr), eval(expr2))
 # [1] TRUE
 ```
 
-
 ## Not supported 
-* Does not reflect the last function's visibility (pringint the result or not)
+* visibility of the result of a last function
+ (pringint the result or not)
 
 ## ToDo
-* To make a wrapper function just like source() or sys.source()
+* make a wrapper function just like source() or sys.source()

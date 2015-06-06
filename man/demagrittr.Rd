@@ -2,7 +2,7 @@
 % Please edit documentation in R/demagrittr.R
 \name{demagrittr}
 \alias{demagrittr}
-\title{decompile magrittr's syntax to normal R's syntax}
+\title{Decompile magrittr's syntax to normal R's syntax}
 \usage{
 demagrittr(expr_, eval_ = FALSE)
 }
@@ -12,7 +12,10 @@ demagrittr(expr_, eval_ = FALSE)
 \item{eval_}{evaluate the result if value is TRUE}
 }
 \description{
-decompile magrittr's syntax to normal R's syntax
+Semantics of \code{\%>\%} is eager evaluation, the example of magrittr
+ is not accurate. \code{x \%>\% f} is not equivalent to \code{f(x)} but equals to
+ \code{{tmp <- x; f(tmp)}} or \code{{force(x); f(x)}}. demagrittr() converts magrittr's syntax to such eager
+ evaluation.
 }
 \examples{
 demagrittr(x \%>\% f)
