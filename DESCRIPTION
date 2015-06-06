@@ -1,0 +1,11 @@
+Package: demagrittr
+Type: Package
+Title: Decompile magrittr's Syntax to Normal R's Syntax
+Version: 0.0.1
+Date: 2015-06-06
+Authors@R: person("tob", "", email = "tobakucapitalism@gmail.com",
+  role = c("aut", "cre"))
+Description: Decompile magrittr's syntax to normal R's syntax.
+License: MIT + file LICENSE
+Suggests: testthat, knitr, rmarkdown, magrittr
+VignetteBuilder: knitr
