@@ -4,7 +4,7 @@
 demagrittr() converts magrittr's syntax to eager evaluation syntax for
 the purpose of: 
 
-+ understanding quite complicated and nested piped sentenses
++ understanding quite complicated and nested piped sentences
 + debugging when an error occurs
 + run-time reduction (if `%>%` is heavily used inside a long loop)
 
@@ -57,7 +57,7 @@ identical(eval(expr), eval(expr2))
 
 ## Not supported 
 * control visibility of a result of the last function
- (pringint the result or not)
+ (printing the result or not)
 
 ## ToDo
 * make a wrapper function just like source() or sys.source()
