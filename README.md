@@ -33,7 +33,6 @@ demagrittr(1:10 %>% sum %>% log %>% sin, eval_ = TRUE)
 ```
 
 # benchmarking
-demagrittr() can be treated as precompiling so once converting expressions,
 ``` r
 library("microbenchmark")
 library("magrittr")
