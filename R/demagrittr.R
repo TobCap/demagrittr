@@ -23,11 +23,11 @@ demagrittr <- (function() {
 
   ops <- c("%>%", "%T>%", "%$%", "%<>%")
   pf_ <- NULL
-  var_id <- 0
+  var_id <- 0L
 
   make_var_name <- function(base_ = "._tmp") {
     new_name <- paste0(base_, var_id)
-    var_id <<- var_id + 1
+    var_id <<- var_id + 1L
     as.symbol(new_name)
   }
 
@@ -140,7 +140,7 @@ demagrittr <- (function() {
 
   # returns this function
   function(expr_, eval_ = FALSE) {
-    on.exit(var_id <<- 0)
+    on.exit(var_id <<- 0L)
 
     pf_ <<- parent.frame()
     target <- if (is.symbol(tmp <- substitute(expr_))) expr_ else tmp
