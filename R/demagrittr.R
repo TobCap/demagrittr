@@ -99,20 +99,22 @@ demagrittr <- (function() {
       rhs_ <- l[[1]]$rhs
       op_ <- l[[1]]$op
       direct_dot_pos <- which(as.list(rhs_) == quote(.))
+      sym_new <- make_var_name()
 
       lang <-
-        switch(as.character(l[[1]]$op)
-          , "%T>%" = get_rhs_mod(direct_dot_pos, rhs_, sym)
-          , "%$%" = call("<-", sym, call("with", sym, rhs_))
-          , call("<-", sym, get_rhs_mod(direct_dot_pos, rhs_, sym))
+        switch(as.character(op_)
+          , "%T>%" = get_rhs_mod(direct_dot_pos, rhs_, sym_prev)
+          , "%$%" = call("<-", sym_new, call("with", sym_prev, rhs_))
+          , call("<-", sym_new, get_rhs_mod(direct_dot_pos, rhs_, sym_prev))
           # last part is a default value for "%>%" and "%<>%"
         )
 
       # first assignment
-      lang <- c(`if`(is.null(acc), call("<-", sym, sym_prev), NULL), lang)
-      iter2(l[-1], sym, c(acc, lang))
+      lang <- c(`if`(is.null(acc), call("<-", sym, first_sym), NULL), lang)
+      iter2(l[-1], `if`(op_ == "%T>%", sym_prev, sym_new), c(acc, lang))
     }
-    as.call(c(quote(`{`), iter2(lst[-1], first_sym)))
+
+    as.call(c(quote(`{`), iter2(lst[-1], sym), NULL))
   }
 
   build_fun <- function(lst) {
