@@ -36,11 +36,15 @@ demagrittr <- (function() {
     call("function", as.pairlist(alist(._=)), wrap(body_, FALSE))
   }
 
+  replace_lhs <- function(x, expr_new) {
+    as.call(c(x[[1]], replace_dot_recursive(x[[2]], expr_new), x[[3]]))
+  }
+
   replace_dot_recursive <- function(x, expr_new) {
     # inside tilda, kind of inner DSL, a dot symbol is reserved for model description
     if ((length(x) <= 1 && x != ".") || (is.call(x) && x[[1]] == "~")) x
     else if (is.symbol(x) && x == ".") expr_new
-    else if (length(x) == 3 && as.character(x[[1]]) %in% ops) get_pipe_info(x, build_fun)
+    else if (length(x) == 3 && as.character(x[[1]]) %in% ops) get_pipe_info(replace_lhs(x, expr_new), build_fun)
     else if (is.pairlist(x)) as.pairlist(lapply(x, replace_dot_recursive, expr_new))
     else as.call(lapply(x, replace_dot_recursive, expr_new))
   }
@@ -48,9 +52,9 @@ demagrittr <- (function() {
   replace_direct_dot <- function(x, expr_new) {
     as.call(lapply(x, function(y) {
       y_syms <- all.names(y)
-      if (y == ".") expr_new
+      if (length(y) == 1 && is.symbol(y) && y == ".") expr_new
       else if (any("." %in% y_syms) && !any(y_syms %in% ops)) replace_dot_recursive(y, expr_new)
-      else if (any(y_syms %in% ops)) get_pipe_info(y, build_fun)
+      else if (any(y_syms %in% ops)) dig_ast(y)
       else y
     }))
   }
