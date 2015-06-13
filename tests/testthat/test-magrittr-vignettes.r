@@ -1,5 +1,5 @@
 context("test for examples of magrittr's vegnettes")
-library("magrittr")
+suppressMessages(library("magrittr"))
 
 testthat::test_that("equiv value", {
   # http://cran.r-project.org/web/packages/magrittr/vignettes/magrittr.html

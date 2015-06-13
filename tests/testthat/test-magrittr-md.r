@@ -1,6 +1,6 @@
 ## https://github.com/smbache/magrittr/blob/59eae6bffa37a5672b9686ba759bf2ceb1a12e30/inst/doc/magrittr.md
 context("test for examples of magrittr's previous readme")
-library("magrittr")
+suppressMessages(library("magrittr"))
 
 testthat::test_that("equiv value2", {
   weekly <- quote(
@@ -20,5 +20,3 @@ testthat::test_that("equiv value2", {
 
   expect_identical(unname(eval(windy.weeks)), unname(eval(demagrittr(windy.weeks))))
 })
-
-
