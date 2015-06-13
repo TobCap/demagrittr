@@ -22,6 +22,10 @@
 demagrittr <- (function() {
 
   ops <- c("%>%", "%T>%", "%$%", "%<>%")
+  dplyr_funs <- c(
+    "filter", "slice", "arrange", "select", "rename", "distinct"
+  , "mutate", "transmute", "summarise")
+
   pf_ <- NULL
   var_id <- 0L
 
@@ -33,7 +37,9 @@ demagrittr <- (function() {
 
   make_lambda <- function(body_) {
     body_[[1]]$rhs <- quote(._)
-    call("function", as.pairlist(alist(._=)), wrap(body_, FALSE))
+    #call("function", as.pairlist(alist(._=)), wrap(body_, FALSE))
+    arg_ <- as.vector(list(._ = quote(expr=)), "pairlist")
+    call("function", arg_, wrap(body_, FALSE))
   }
 
   replace_lhs <- function(x, expr_new) {
@@ -44,7 +50,7 @@ demagrittr <- (function() {
     # inside tilda, kind of inner DSL, a dot symbol is reserved for model description
     if ((length(x) <= 1 && x != ".") || (is.call(x) && x[[1]] == "~")) x
     else if (is.symbol(x) && x == ".") expr_new
-    else if (length(x) == 3 && as.character(x[[1]]) %in% ops) get_pipe_info(replace_lhs(x, expr_new), build_fun)
+    else if (incl_magrittr_ops(x)) build_fun(get_pipe_info(replace_lhs(x, expr_new)))
     else if (is.pairlist(x)) as.pairlist(lapply(x, replace_dot_recursive, expr_new))
     else as.call(lapply(x, replace_dot_recursive, expr_new))
   }
@@ -64,7 +70,7 @@ demagrittr <- (function() {
 
     switch(
       typeof(rhs_mod)
-      , "language" = get_pipe_info(call("%>%", sym_prev, rhs_mod), build_fun)
+      , "language" = build_fun(get_pipe_info(call("%>%", sym_prev, rhs_mod)))
       , as.call(c(rhs_mod, sym_prev))
     )
   }
@@ -93,6 +99,9 @@ demagrittr <- (function() {
       else c(acc_, sym_prev_)
     }
 
+    #assign_sym <- if (use_assign_sym) "assign" else "<-"
+    assign_sym <- "<-"
+
     iter2 <- function(l, sym_prev, acc = NULL) {
       if (length(l) == 0) return(make_last_lang(acc, sym_prev))
 
@@ -105,12 +114,11 @@ demagrittr <- (function() {
         switch(as.character(op_)
           , "%T>%" = get_rhs_mod(direct_dot_pos, rhs_, sym_prev)
           , "%$%" = call("<-", sym_new, call("with", sym_prev, rhs_))
-          , call("<-", sym_new, get_rhs_mod(direct_dot_pos, rhs_, sym_prev))
-          # last part is a default value for "%>%" and "%<>%"
+          , call(assign_sym, sym_new, get_rhs_mod(direct_dot_pos, rhs_, sym_prev))
         )
 
       # first assignment
-      lang <- c(`if`(is.null(acc), call("<-", sym, first_sym), NULL), lang)
+      lang <- c(`if`(is.null(acc), call(assign_sym, sym, first_sym), NULL), lang)
       iter2(l[-1], `if`(op_ == "%T>%", sym_prev, sym_new), c(acc, lang))
     }
 
@@ -127,15 +135,22 @@ demagrittr <- (function() {
       wrap(lst, first_op == "%<>%")
   }
 
-  # CPS form
-  get_pipe_info <- function(x, cont) {
-    if (length(x) <= 1 || !(as.character(x[[1]]) %in% ops)) cont(list(list(op = NULL, rhs = dig_ast(x))))
-    else get_pipe_info(x[[2]], function(y) cont(c(y, list(list(op = x[[1]], rhs = x[[3]])))))
+
+  get_pipe_info <- function(x, acc = NULL) {
+    if (length(x) <= 1 || !incl_magrittr_ops(x)) c(list(list(op = NULL, rhs = dig_ast(x))), acc)
+    else get_pipe_info(x[[2]], c(list(list(op = x[[1]], rhs = x[[3]])), acc))
+  }
+
+  incl_magrittr_ops <- function(x) length(x) == 3 && any(as.character(x[[1]]) == ops)
+
+  need_dplyr_modif <- function(x) {
+    length(x) > 1 && any(as.character(x[[1]]) == dplyr_funs) &&
+      any(vapply(x[-1], function(y) length(y) > 1 && any(as.character(y[[1]]) == ops), logical(1)))
   }
 
   dig_ast <- function(x) {
     if (length(x) <= 1 && !is.recursive(x)) x
-    else if (length(x) == 3 && as.character(x[[1]]) %in% ops) get_pipe_info(x, build_fun)
+    else if (incl_magrittr_ops(x)) build_fun(get_pipe_info(x))
     else if (is.pairlist(x)) as.pairlist(lapply(x, dig_ast))
     else as.call(lapply(x, dig_ast))
   }
