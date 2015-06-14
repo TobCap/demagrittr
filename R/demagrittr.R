@@ -53,12 +53,18 @@ demagrittr <- (function() {
   }
 
   replace_dot_recursive <- function(x, expr_new) {
-    # inside tilda, kind of inner DSL, a dot symbol is reserved for model description
-    if ((length(x) <= 1 && x != ".") || (is.call(x) && x[[1]] == "~")) x
-    else if (is.symbol(x) && x == ".") expr_new
-    else if (incl_magrittr_ops(x)) build_fun(get_pipe_info(replace_lhs(x, expr_new)))
-    else if (is.pairlist(x)) as.pairlist(lapply(x, replace_dot_recursive, expr_new))
-    else as.call(lapply(x, replace_dot_recursive, expr_new))
+    if (!incl_dot_sym(x)) return(dig_ast(x))
+
+    iter <- function(x, expr_new) {
+      if (is.symbol(x) && x == ".") expr_new
+      else if (length(x) <= 1 && !is.call(x)) x
+      else if (x[[1]] == "~") as.call(c(quote(`~`), lapply(as.list(x[-1]), dig_ast)))
+      else if (is_magrittr_ops(x)) build_fun(get_pipe_info(x), expr_new)
+      else if (is.pairlist(x)) as.pairlist(lapply(x, iter, expr_new))
+      else as.call(lapply(x, iter, expr_new))
+    }
+
+    iter(x, expr_new)
   }
 
   replace_direct_dot <- function(x, expr_new) {
