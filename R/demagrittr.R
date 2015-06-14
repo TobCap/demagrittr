@@ -74,7 +74,7 @@ demagrittr <- (function() {
     rhs_mod <- eval(rhs_, pf_)
     switch(
       typeof(rhs_mod)
-      , "language" = build_fun(get_pipe_info(call("%>%", sym_prev, rhs_mod)))
+      , "language" = build_fun(get_pipe_info(call("%>%", sym_prev, rhs_mod)), NULL)
       , as.call(c(rhs_mod, sym_prev))
     )
   }
@@ -135,18 +135,29 @@ demagrittr <- (function() {
     as.call(c(quote(`{`), iter2(lst[-1], as.symbol(sym), acc = first_assign)))
   }
 
-  build_fun <- function(lst) {
+  replace_rhs_origin <- function(rhs, replace_sym) {
+    if (!incl_dot_sym(rhs)) return(rhs) # rhs is already applied by dig_ast() in get_pipe_info()
+    else substituteDirect(rhs, list(. = replace_sym)) # maybe ok?
+  }
+
+  build_fun <- function(lst, replace_sym, use_assign_sym = FALSE) {
     origin <- lst[[1]]$rhs
     first_op <- lst[[2]]$op # `lst` should have more than one element
 
     if (length(origin) == 1 && origin == "." && first_op == "%>%")
       make_lambda(lst)
-    else
-      wrap(lst, first_op == "%<>%")
+    else if (is.null(replace_sym))
+      wrap(lst, first_op == "%<>%", use_assign_sym)
+    else {
+      # this is called x %>% {(. + 1) %>% f}
+      lst[[1]]$rhs <- replace_rhs_origin(origin, replace_sym)
+      wrap(lst, first_op == "%<>%", use_assign_sym)
+    }
   }
 
   get_pipe_info <- function(x, acc = NULL) {
-    if (length(x) <= 1 || !incl_magrittr_ops(x)) c(list(list(op = NULL, rhs = dig_ast(x))), acc)
+    # the most left-side of pipe-stream is needed to be recursively parsed by dig_ast()
+    if (!is_magrittr_ops(x)) c(list(list(op = NULL, rhs = dig_ast(x))), acc)
     else get_pipe_info(x[[2]], c(list(list(op = x[[1]], rhs = x[[3]])), acc))
   }
 
