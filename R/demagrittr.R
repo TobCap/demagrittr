@@ -63,10 +63,7 @@ demagrittr <- (function() {
 
   replace_direct_dot <- function(x, expr_new) {
     as.call(lapply(x, function(y) {
-      y_syms <- all.names(y)
-      if (length(y) == 1 && is.symbol(y) && y == ".") expr_new
-      else if (any("." %in% y_syms) && !any(y_syms %in% ops)) replace_dot_recursive(y, expr_new)
-      else if (any(y_syms %in% ops)) dig_ast(y)
+      if (is.symbol(y) && y == ".") expr_new
       else y
     }))
   }
