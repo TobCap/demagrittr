@@ -85,18 +85,24 @@ demagrittr <- (function() {
   }
 
   get_rhs_mod <- function(direct_dot_pos, rhs_, sym_prev) {
-    if (length(direct_dot_pos) > 0)
-      replace_direct_dot(rhs_, sym_prev)
-    else if (length(rhs_) == 1 && is.recursive(rhs_))
-      as.call(c(rhs_[[1]], sym_prev))
-    else if (length(rhs_) == 1)
-      as.call(c(rhs_, sym_prev))
-    else if (rhs_[[1]] == "(")
+    if (length(rhs_) == 1 && !is.recursive(rhs_)) # symbol or character is valid when parsing
+      return(as.call(c(rhs_, sym_prev)))
+
+    rhs_elem1 <- rhs_[[1]]
+    if (length(rhs_) == 1 && is.call(rhs_))
+      as.call(c(rhs_elem1, sym_prev))
+    else if (rhs_elem1 == "(")
       get_rhs_brace(rhs_, sym_prev)
-    else if (rhs_[[1]] == "{")
+    else if (rhs_elem1 == "{")
+      replace_dot_recursive(rhs_, sym_prev)
+    else if (length(direct_dot_pos) > 0 && direct_dot_pos[[1]] != 0) # 0 means converted already
+      get_rhs_mod(0, replace_direct_dot(rhs_, sym_prev), sym_prev)
+    else if (length(direct_dot_pos) == 0)
+      get_rhs_mod(0, as.call(c(rhs_elem1, sym_prev, as.list(rhs_)[-1])), sym_prev)
+    else if (direct_dot_pos == 0)# already direct-dot is converted
       replace_dot_recursive(rhs_, sym_prev)
     else
-      as.call(c(rhs_[[1]], sym_prev, lapply(as.list(rhs_)[-1], replace_dot_recursive, sym_prev)))
+      stop("missing pattern in get_rhs_mod()")
   }
 
   wrap <- function(lst, reassign = FALSE) {
