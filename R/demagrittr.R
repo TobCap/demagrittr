@@ -28,11 +28,17 @@ demagrittr <- (function() {
 
   pf_ <- NULL
   var_id <- 0L
+  tmp_basename <- "#tmp"
 
-  make_var_name <- function(base_ = "._tmp") {
+  is_magrittr_ops <- function(x) length(x) == 3 && any(as.character(x[[1]]) == ops)
+  incl_magrittr_ops <- function(x) any(all.names(x) %in% ops)
+  incl_dot_sym <- function(x) any(all.names(x) %in% ".")
+
+  make_var_name <- function(base_ = tmp_basename, as_symbol = TRUE) {
     new_name <- paste0(base_, var_id)
     var_id <<- var_id + 1L
-    as.symbol(new_name)
+    if (as_symbol) as.symbol(new_name)
+    else new_name # character
   }
 
   make_lambda <- function(body_) {
