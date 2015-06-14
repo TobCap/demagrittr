@@ -1,7 +1,7 @@
-context("test for examples of magrittr's vegnettes")
-library("magrittr")
+context("magrittr vignettes")
+suppressMessages(library("magrittr"))
 
-testthat::test_that("equiv value", {
+test_that("equiv value", {
   # http://cran.r-project.org/web/packages/magrittr/vignettes/magrittr.html
   e1 <- quote({
     car_data <-
@@ -36,6 +36,11 @@ testthat::test_that("equiv value", {
     1:10 %>% (substitute(f(), list(f = sum)))
   })
   expect_identical(eval(e4), eval(demagrittr(e4)))
+
+  e41 <- quote({
+    1:5 %>% (call("sum", 100))
+  })
+  expect_identical(eval(e41), eval(demagrittr(e41)))
 
   e5 <- quote({
     set.seed(1)

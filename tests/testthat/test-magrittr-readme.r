@@ -1,7 +1,7 @@
-context("test for examples of magrittr's readme")
-library("magrittr")
+context("magrittr readme")
+suppressMessages(library("magrittr"))
 
-testthat::test_that("equiv value", {
+test_that("equiv value", {
   # https://github.com/smbache/magrittr/blob/master/README.md
 
   # More advanced right-hand sides and lambdas
