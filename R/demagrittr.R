@@ -105,39 +105,39 @@ demagrittr <- (function() {
       stop("missing pattern in get_rhs_mod()")
   }
 
-  wrap <- function(lst, reassign = FALSE) {
-    sym <- make_var_name()
+  make_last_lang <- function(acc_, first_sym, sym_prev_, reassign) {
+    if (reassign) c(acc_, call("<-", first_sym, sym_prev_))
+    else c(acc_, sym_prev_)
+  }
+
+  wrap <- function(lst, reassign = FALSE, use_assign_sym = FALSE) {
+    sym <- make_var_name(as_symbol = !use_assign_sym)
     first_sym <- lst[[1]]$rhs
-
-    make_last_lang <- function(acc_, sym_prev_) {
-      if (reassign) c(acc_, call("<-", first_sym, sym_prev_))
-      else c(acc_, sym_prev_)
-    }
-
-    #assign_sym <- if (use_assign_sym) "assign" else "<-"
-    assign_sym <- "<-"
+    assign_sym <- if (use_assign_sym) "assign" else "<-"
 
     iter2 <- function(l, sym_prev, acc = NULL) {
-      if (length(l) == 0) return(make_last_lang(acc, sym_prev))
+      if (length(l) == 0)
+        return(make_last_lang(acc, first_sym, sym_prev, reassign))
 
       rhs_ <- l[[1]]$rhs
       op_ <- l[[1]]$op
+
+      # need to check whether rhs_[[1]] is not "{"
       direct_dot_pos <- which(as.list(rhs_) == quote(.))
-      sym_new <- make_var_name()
+      sym_new <- make_var_name(as_symbol = !use_assign_sym)
 
       lang <-
         switch(as.character(op_)
           , "%T>%" = get_rhs_mod(direct_dot_pos, rhs_, sym_prev)
-          , "%$%" = call("<-", sym_new, call("with", sym_prev, rhs_))
+          , "%$%" = call(assign_sym, sym_new, call("with", sym_prev, rhs_))
           , call(assign_sym, sym_new, get_rhs_mod(direct_dot_pos, rhs_, sym_prev))
         )
 
-      # first assignment
-      lang <- c(`if`(is.null(acc), call(assign_sym, sym, first_sym), NULL), lang)
-      iter2(l[-1], `if`(op_ == "%T>%", sym_prev, sym_new), c(acc, lang))
+      iter2(l[-1], as.symbol(`if`(op_ == "%T>%", sym_prev, sym_new)), c(acc, lang))
     }
 
-    as.call(c(quote(`{`), iter2(lst[-1], sym), NULL))
+    first_assign <- call(assign_sym, sym, first_sym)
+    as.call(c(quote(`{`), iter2(lst[-1], as.symbol(sym), acc = first_assign)))
   }
 
   build_fun <- function(lst) {
