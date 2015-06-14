@@ -43,13 +43,8 @@ demagrittr <- (function() {
 
   make_lambda <- function(body_) {
     body_[[1]]$rhs <- quote(._)
-    #call("function", as.pairlist(alist(._=)), wrap(body_, FALSE))
     arg_ <- as.vector(list(._ = quote(expr=)), "pairlist")
     call("function", arg_, wrap(body_, FALSE))
-  }
-
-  replace_lhs <- function(x, expr_new) {
-    as.call(c(x[[1]], replace_dot_recursive(x[[2]], expr_new), x[[3]]))
   }
 
   replace_dot_recursive <- function(x, expr_new) {
@@ -67,6 +62,7 @@ demagrittr <- (function() {
     iter(x, expr_new)
   }
 
+
   replace_direct_dot <- function(x, expr_new) {
     as.call(lapply(x, function(y) {
       if (is.symbol(y) && y == ".") expr_new
@@ -76,7 +72,6 @@ demagrittr <- (function() {
 
   get_rhs_brace <- function(rhs_, sym_prev) {
     rhs_mod <- eval(rhs_, pf_)
-
     switch(
       typeof(rhs_mod)
       , "language" = build_fun(get_pipe_info(call("%>%", sym_prev, rhs_mod)))
@@ -149,7 +144,6 @@ demagrittr <- (function() {
     else
       wrap(lst, first_op == "%<>%")
   }
-
 
   get_pipe_info <- function(x, acc = NULL) {
     if (length(x) <= 1 || !incl_magrittr_ops(x)) c(list(list(op = NULL, rhs = dig_ast(x))), acc)
