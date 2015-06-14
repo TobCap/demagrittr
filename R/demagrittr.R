@@ -156,16 +156,23 @@ demagrittr <- (function() {
     else get_pipe_info(x[[2]], c(list(list(op = x[[1]], rhs = x[[3]])), acc))
   }
 
-  incl_magrittr_ops <- function(x) length(x) == 3 && any(as.character(x[[1]]) == ops)
-
-  need_dplyr_modif <- function(x) {
+  need_dplyr_modify <- function(x) {
     length(x) > 1 && any(as.character(x[[1]]) == dplyr_funs) &&
-      any(vapply(x[-1], function(y) length(y) > 1 && any(as.character(y[[1]]) == ops), logical(1)))
+      any(vapply(as.list(x)[-1], is_magrittr_ops, logical(1)))
+  }
+
+  pre_arrange_dplyr <- function(x) {
+    # x is like `filter(iris, Sepal.Width %>% is_greater_than(4.3))`
+    as.call(c(x[[1]], lapply(as.list(x)[-1], function(y) {
+      if (is_magrittr_ops(y)) build_fun(get_pipe_info(y), NULL, use_assign_sym = TRUE)
+      else y
+    })))
   }
 
   dig_ast <- function(x) {
     if (length(x) <= 1 && !is.recursive(x)) x
-    else if (incl_magrittr_ops(x)) build_fun(get_pipe_info(x))
+    else if (need_dplyr_modify(x)) pre_arrange_dplyr(x)
+    else if (is_magrittr_ops(x)) build_fun(get_pipe_info(x), NULL)
     else if (is.pairlist(x)) as.pairlist(lapply(x, dig_ast))
     else as.call(lapply(x, dig_ast))
   }
