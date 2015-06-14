@@ -160,6 +160,8 @@ demagrittr <- (function() {
     on.exit(var_id <<- 0L)
 
     pf_ <<- parent.frame()
+    rm(list = ls(pattern = paste0("^", tmp_basename, "*"), envir = pf_, all.names = TRUE), envir = pf_)
+
     target <- if (is.symbol(tmp <- substitute(expr_))) expr_ else tmp
     new_call <- dig_ast(target)
 
