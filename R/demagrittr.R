@@ -24,7 +24,7 @@ demagrittr <- (function() {
   ops <- c("%>%", "%T>%", "%$%", "%<>%")
   dplyr_funs <- c(
     "filter", "slice", "arrange", "select", "rename", "distinct"
-  , "mutate", "transmute", "summarise")
+  , "mutate", "transmute", "summarise", "summarize")
 
   pf_ <- NULL
   var_id <- 0L
