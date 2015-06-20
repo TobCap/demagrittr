@@ -22,8 +22,15 @@ library("demagrittr")
 ``` r
 # direct passing 
 demagrittr(x %>% f %>% g %>% h)
+# {
+#     `#tmp0` <- x
+#     `#tmp1` <- f(`#tmp0`)
+#     `#tmp2` <- g(`#tmp1`)
+#     `#tmp3` <- h(`#tmp2`)
+#     `#tmp3`
+# }
 
-# call object can be treated
+# language object can be treated
 expr <- quote(x %>% f %>% g %>% h)
 demagrittr(expr)
 
@@ -32,7 +39,7 @@ demagrittr(1:10 %>% sum %>% log %>% sin, eval_ = TRUE)
 # [1] -0.7615754
 ```
 
-# benchmarking
+# Benchmarking
 ``` r
 library("microbenchmark")
 library("magrittr")
@@ -56,8 +63,9 @@ microbenchmark(
 
 identical(eval(expr1), eval(expr2))
 # [1] TRUE
+```
 
-
+```r
 ## from http://renkun.me/blog/2014/08/08/difference-between-magrittr-and-pipeR.html#performance
 expr4 <- quote(
   lapply(1:100000, function(i) {
@@ -89,12 +97,15 @@ microbenchmark(
 
 identical(eval(expr4), eval(expr5))
 # [1] TRUE
-
 ```
 
-## Not supported 
-* control visibility of a result of the last function
- (printing the result or not)
+## Known problems
+* Not guaranteed to preserve the same visibility of a result when evaluating
+(printing the result or not in your console)
+* `#tmp{n}` is used for the prefix-name of temporary symbols in the converted
+language object. So there will be overwritting if you have already created
+such a symbol in the environment where you want to evaluate a language object
+convertedy by `demagrittr()`. (hope nobody uses such a tricky name as a symbol)
 
-## ToDo
+## To-Do
 * make a wrapper function just like source() or sys.source()
