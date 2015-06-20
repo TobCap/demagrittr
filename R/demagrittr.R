@@ -25,20 +25,30 @@ demagrittr <- (function() {
   dplyr_funs <- c(
     "filter", "slice", "arrange", "select", "rename", "distinct"
   , "mutate", "transmute", "summarise", "summarize")
+  regexp_meta <- c(".", "\\", "|", "(", ")" , "[", "{", "^", "$", "*", "+", "?")
 
   pf_ <- NULL
   var_id <- 0L
-  tmp_basename <- "#tmp"
+  varname_prefix <- "#tmp"
 
   is_magrittr_call <- function(x) length(x) == 3 && any(as.character(x[[1]]) == ops)
   incl_magrittr_ops <- function(x) any(all.names(x) %in% ops)
   incl_dot_sym <- function(x) any(all.names(x) %in% ".")
 
-    new_name <- paste0(base_, var_id)
   make_varname <- function(prefix = varname_prefix, as_symbol = TRUE) {
+    if (any(strsplit(prefix, "")[[1]] %in% regexp_meta))
+      stop("cannot use regexp_meta_char in `prefix` of make_varname()")
+
+    new_name <- paste0(prefix, var_id)
     var_id <<- var_id + 1L
-    if (as_symbol) as.symbol(new_name)
+
+    if (exists(new_name, envir = pf_)) Recall(prefix = prefix, as_symbol = as_symbol)
+    else if (as_symbol) as.symbol(new_name)
     else new_name # character
+  }
+
+  rm_tmp_symbols_if_exists <- function() {
+    rm(list = ls(pattern = paste0("^", varname_prefix, "*"), envir = pf_, all.names = TRUE), envir = pf_)
   }
 
   make_lambda <- function(body_) {
@@ -186,7 +196,9 @@ demagrittr <- (function() {
     on.exit(var_id <<- 0L)
 
     pf_ <<- parent.frame()
-    rm(list = ls(pattern = paste0("^", tmp_basename, "*"), envir = pf_, all.names = TRUE), envir = pf_)
+
+    ## need to remove when evaluating
+    rm_tmp_symbols_if_exists()
 
     target <- if (is.symbol(tmp <- substitute(expr_))) expr_ else tmp
     new_call <- dig_ast(target)
