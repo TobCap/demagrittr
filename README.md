@@ -41,6 +41,28 @@ demagrittr(1:10 %>% sum %>% log %>% sin, eval_ = TRUE)
 
 # Benchmarking
 ``` r
+e <- quote(
+ for (i in 1:10000) {
+   i %>%
+     identity %>%
+     identity %>%
+     identity %>%
+     identity
+ }
+)
+
+system.time(eval(e))
+system.time(eval(demagrittr(e)))
+
+# > system.time(eval(e))
+#    user  system elapsed 
+#    5.44    0.02    5.54 
+# > system.time(eval(demagrittr(e)))
+#    user  system elapsed 
+#    0.08    0.00    0.07 
+```
+
+``` r
 library("microbenchmark")
 library("magrittr")
 library("pipeR")
@@ -67,6 +89,8 @@ identical(eval(expr1), eval(expr2))
 
 ```r
 ## from http://renkun.me/blog/2014/08/08/difference-between-magrittr-and-pipeR.html#performance
+set.seed(1)
+
 expr4 <- quote(
   lapply(1:100000, function(i) {
     sample(letters,6,replace = T) %>%
