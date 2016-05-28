@@ -31,7 +31,8 @@ demagrittr <- (function() {
   var_id <- 0L
   varname_prefix <- "#tmp"
 
-  is_magrittr_call <- function(x) length(x) == 3 && any(as.character(x[[1]]) == ops)
+  is_magrittr_call <- function(x) length(x) == 3 &&
+    length(x[[1]]) == 1 && any(as.character(x[[1]]) == ops)
   incl_magrittr_ops <- function(x) any(all.names(x) %in% ops)
   incl_dot_sym <- function(x) any(all.names(x) %in% ".")
 
@@ -115,6 +116,7 @@ demagrittr <- (function() {
   }
 
   wrap <- function(lst, reassign = FALSE, use_assign_sym = FALSE) {
+
     sym <- make_varname(as_symbol = !use_assign_sym)
     first_sym <- lst[[1]]$rhs
     assign_sym <- if (use_assign_sym) "assign" else "<-"
@@ -133,7 +135,8 @@ demagrittr <- (function() {
       lang <-
         switch(as.character(op_)
           , "%T>%" = get_rhs_mod(direct_dot_pos, rhs_, sym_prev)
-          , "%$%" = call(assign_sym, sym_new, call("with", sym_prev, rhs_))
+          # , "%$%" = call(assign_sym, sym_new, call("with", sym_prev, rhs_))
+          , "%$%" = call(assign_sym, sym_new, call("with", sym_prev, dig_ast(reaplace_rhs_with_exit(rhs_,as.symbol("."),  sym_prev))))
           , call(assign_sym, sym_new, get_rhs_mod(direct_dot_pos, rhs_, sym_prev))
         )
 
@@ -142,6 +145,22 @@ demagrittr <- (function() {
 
     first_assign <- call(assign_sym, sym, first_sym)
     as.call(c(quote(`{`), iter2(lst[-1], as.symbol(sym), acc = first_assign)))
+  }
+
+  reaplace_rhs_with_exit <- function(expr, from_sym, to_sym) {
+    iter <- function(expr) {
+      if (is_magrittr_call(expr))
+        as.call(list(expr[[1]], iter(expr[[2]]), expr[[3]]))
+      else if (length(expr) == 1 && is.symbol(expr) && identical(expr, from_sym))
+        to_sym
+      else if (length(expr) == 1)
+        expr
+      else if (is.pairlist(expr))
+        as.pairlist(lapply(expr, iter))
+      else
+        as.call(lapply(expr, iter))
+    }
+    iter(expr)
   }
 
   replace_rhs_origin <- function(rhs, replace_sym) {
@@ -171,8 +190,16 @@ demagrittr <- (function() {
   }
 
   need_dplyr_modify <- function(x) {
-    length(x) > 1 && any(as.character(x[[1]]) == dplyr_funs) &&
-      any(vapply(as.list(x)[-1], is_magrittr_call, logical(1)))
+    if (length(x) > 1 && length(x[[1]]) == 1) {
+      any(as.character(x[[1]]) == dplyr_funs) &&
+        any(vapply(as.list(x)[-1], is_magrittr_call, logical(1)))
+    } else if (length(x) > 1 && length(x[[1]]) > 1) {
+      # dplyr::filter(...) or dplyr:::filter(...)
+      as.character(x[[1]]) == "dplyr" &&
+        any(as.character(x[[3]]) == dplyr_funs) &&
+        any(vapply(as.list(x)[-1], is_magrittr_call, logical(1)))
+    } else
+      FALSE
   }
 
   pre_arrange_dplyr <- function(x) {
