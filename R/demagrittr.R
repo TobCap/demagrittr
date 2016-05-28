@@ -49,7 +49,9 @@ demagrittr <- (function() {
   }
 
   rm_tmp_symbols_if_exists <- function() {
-    rm(list = ls(pattern = paste0("^", varname_prefix, "*"), envir = pf_, all.names = TRUE), envir = pf_)
+    rm(list = ls(pattern = paste0("^", varname_prefix, "*")
+     , envir = pf_, all.names = TRUE)
+     , envir = pf_)
   }
 
   make_lambda <- function(body_) {
@@ -81,24 +83,6 @@ demagrittr <- (function() {
     iter_
     # need iter_ because of using from recursive function call
   }
-
-  # replace_dot_recursive <- function(x, expr_new) {
-  #   if (!incl_dot_sym(x)) return(dig_ast(x))
-  #
-  #   iter <- function(x) {
-  #     if (is.symbol(x) && x == ".") expr_new
-  #     else if (length(x) <= 1 && !is.call(x)) x
-  #     else if (x[[1]] == "~") as.call(c(quote(`~`), lapply(as.list(x[-1]), dig_ast)))
-  #     else if (is_magrittr_call(x)) build_pipe_call(get_pipe_info(x), expr_new)
-  #     else if (is.pairlist(x)) as.pairlist(lapply(x, iter))
-  #     else as.call(lapply(x, iter))
-  #   }
-  #   print(environment())
-  #   print(environment(iter))
-  #   iter(x)
-  # }
-
-
 
   replace_dot_recursive <- function(x, expr_new) {
     if (!incl_dot_sym(x)) return(dig_ast(x))
@@ -189,19 +173,13 @@ demagrittr <- (function() {
   }
 
   reaplace_rhs_with_exit <- function(expr, from_sym, to_sym) {
-    iter <- function(expr) {
-      if (is_magrittr_call(expr))
-        as.call(list(expr[[1]], iter(expr[[2]]), expr[[3]]))
-      else if (length(expr) == 1 && is.symbol(expr) && identical(expr, from_sym))
+    iter_ <- make_dig_with_ifs(quote(
+      if (is_magrittr_call(expr_))
+        as.call(list(expr_[[1]], iter_(expr_[[2]]), expr_[[3]]))
+      else if (length(expr_) == 1 && is.symbol(expr_) && identical(expr_, from_sym))
         to_sym
-      else if (length(expr) == 1)
-        expr
-      else if (is.pairlist(expr))
-        as.pairlist(lapply(expr, iter))
-      else
-        as.call(lapply(expr, iter))
-    }
-    iter(expr)
+    ))
+    iter_(expr)
   }
 
   replace_rhs_origin <- function(rhs, replace_sym) {
@@ -251,13 +229,6 @@ demagrittr <- (function() {
     })))
   }
 
-  # dig_ast <- function(x) {
-  #   if (length(x) <= 1 && !is.recursive(x)) x
-  #   else if (need_dplyr_modify(x)) pre_arrange_dplyr(x)
-  #   else if (is_magrittr_call(x)) build_pipe_call(get_pipe_info(x), NULL)
-  #   else if (is.pairlist(x)) as.pairlist(lapply(x, dig_ast))
-  #   else as.call(lapply(x, dig_ast))
-  # }
   dig_ast <- function(x) {
     iter_ <- make_dig_with_ifs(quote(
       if (need_dplyr_modify(expr_)) pre_arrange_dplyr(expr_)
