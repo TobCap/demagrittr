@@ -59,7 +59,8 @@ demagrittr <- (function() {
     call("function", arg_, wrap(body_, FALSE))
   }
 
-  make_dig_with_ifs <- function(ifs, env_ = parent.frame()) {
+  make_dig_with_ifs <- function(ifs_expr, env_ = parent.frame()) {
+    ifs <- substitute(ifs_expr)
     if (!"expr_" %in% all.names(ifs)) stop("need to use 'expr_' in ifs clause")
 
     add_else <- function(prev_, next_) {
@@ -87,14 +88,14 @@ demagrittr <- (function() {
   replace_dot_recursive <- function(x, expr_new) {
     if (!incl_dot_sym(x)) return(dig_ast(x))
 
-    iter_ <- make_dig_with_ifs(quote(
+    iter_ <- make_dig_with_ifs(
       if (is.symbol(expr_) && expr_ == ".")
         expr_new
       else if (length(expr_) > 1 && expr_[[1]] == "~")
         as.call(c(quote(`~`), lapply(as.list(expr_[-1]), dig_ast)))
       else if (is_magrittr_call(expr_))
         build_pipe_call(get_pipe_info(expr_), expr_new)
-    ))
+    )
     iter_(x)
   }
 
@@ -160,7 +161,6 @@ demagrittr <- (function() {
       lang <-
         switch(as.character(op_)
           , "%T>%" = get_rhs_mod(direct_dot_pos, rhs_, sym_prev)
-          # , "%$%" = call(assign_sym, sym_new, call("with", sym_prev, rhs_))
           , "%$%" = call(assign_sym, sym_new, call("with", sym_prev, dig_ast(reaplace_rhs_with_exit(rhs_,as.symbol("."),  sym_prev))))
           , call(assign_sym, sym_new, get_rhs_mod(direct_dot_pos, rhs_, sym_prev))
         )
@@ -173,12 +173,12 @@ demagrittr <- (function() {
   }
 
   reaplace_rhs_with_exit <- function(expr, from_sym, to_sym) {
-    iter_ <- make_dig_with_ifs(quote(
+    iter_ <- make_dig_with_ifs(
       if (is_magrittr_call(expr_))
         as.call(list(expr_[[1]], iter_(expr_[[2]]), expr_[[3]]))
       else if (length(expr_) == 1 && is.symbol(expr_) && identical(expr_, from_sym))
         to_sym
-    ))
+    )
     iter_(expr)
   }
 
@@ -230,10 +230,10 @@ demagrittr <- (function() {
   }
 
   dig_ast <- function(x) {
-    iter_ <- make_dig_with_ifs(quote(
+    iter_ <- make_dig_with_ifs(
       if (need_dplyr_modify(expr_)) pre_arrange_dplyr(expr_)
       else if (is_magrittr_call(expr_)) build_pipe_call(get_pipe_info(expr_), NULL)
-    ))
+    )
     iter_(x)
   }
 
