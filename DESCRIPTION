@@ -1,7 +1,7 @@
 Package: demagrittr
 Type: Package
 Title: Decompile magrittr's Syntax to Normal R's Syntax
-Version: 0.0.1.4
+Version: 0.0.2
 Date: 2016-05-28
 Authors@R: person("tob", "", email = "tobakucapitalism@gmail.com",
   role = c("aut", "cre"))
