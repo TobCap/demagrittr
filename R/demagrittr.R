@@ -57,6 +57,29 @@ demagrittr <- (function() {
     call("function", arg_, wrap(body_, FALSE))
   }
 
+  make_dig_with_ifs <- function(ifs) {
+    if (!"expr_" %in% all.names(ifs)) stop("need to use 'expr_' in ifs clause")
+
+    add_else <- function(prev_, next_) {
+      if (prev_[[1]] != "if") stop("not `if` clause")
+
+      if (length(prev_) == 3) as.call(c(as.list(prev_), next_))
+      else as.call(c(prev_[[1]], prev_[[2]], prev_[[3]], add_else(prev_[[4]], next_)))
+    }
+
+    body_base <- quote(
+      if (length(expr_) <= 1 && !is.recursive(expr_))
+        expr_
+      else if (is.pairlist(expr_))
+        as.pairlist(lapply(expr_, iter_))
+      else
+        as.call(lapply(expr_, iter_))
+    )
+    iter_ <- eval(call("function", as.pairlist(alist(expr_=)), add_else(ifs, body_base)))
+    iter_
+    # need iter_ because of using from recursive function call
+  }
+
   replace_dot_recursive <- function(x, expr_new) {
     if (!incl_dot_sym(x)) return(dig_ast(x))
 
@@ -210,13 +233,18 @@ demagrittr <- (function() {
     })))
   }
 
-  dig_ast <- function(x) {
-    if (length(x) <= 1 && !is.recursive(x)) x
-    else if (need_dplyr_modify(x)) pre_arrange_dplyr(x)
-    else if (is_magrittr_call(x)) build_pipe_call(get_pipe_info(x), NULL)
-    else if (is.pairlist(x)) as.pairlist(lapply(x, dig_ast))
-    else as.call(lapply(x, dig_ast))
-  }
+  # dig_ast <- function(x) {
+  #   if (length(x) <= 1 && !is.recursive(x)) x
+  #   else if (need_dplyr_modify(x)) pre_arrange_dplyr(x)
+  #   else if (is_magrittr_call(x)) build_pipe_call(get_pipe_info(x), NULL)
+  #   else if (is.pairlist(x)) as.pairlist(lapply(x, dig_ast))
+  #   else as.call(lapply(x, dig_ast))
+  # }
+  dig_ast <- make_dig_with_ifs(quote(
+    if (need_dplyr_modify(expr_)) pre_arrange_dplyr(expr_)
+    else if (is_magrittr_call(expr_)) build_pipe_call(get_pipe_info(expr_), NULL)
+  ))
+
 
   # returns this function
   function(expr_, eval_ = FALSE) {
