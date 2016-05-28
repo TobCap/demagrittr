@@ -38,7 +38,7 @@ test_that("equiv value", {
 
   # Compound assignment pipe operations
   e4 <- quote({
-    if (exists("iris")) rm("iris")
+    if (exists("iris", inherits = FALSE)) rm("iris")
     iris$Sepal.Length %<>% sqrt
     iris
   })
