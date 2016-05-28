@@ -57,7 +57,7 @@ demagrittr <- (function() {
     call("function", arg_, wrap(body_, FALSE))
   }
 
-  make_dig_with_ifs <- function(ifs) {
+  make_dig_with_ifs <- function(ifs, env_ = parent.frame()) {
     if (!"expr_" %in% all.names(ifs)) stop("need to use 'expr_' in ifs clause")
 
     add_else <- function(prev_, next_) {
@@ -75,26 +75,44 @@ demagrittr <- (function() {
       else
         as.call(lapply(expr_, iter_))
     )
-    iter_ <- eval(call("function", as.pairlist(alist(expr_=)), add_else(ifs, body_base)))
+    iter_ <- eval(call("function", as.pairlist(alist(expr_=)), add_else(ifs, body_base))
+                  , enclos = env_)
+    environment(iter_) <- env_
     iter_
     # need iter_ because of using from recursive function call
   }
 
+  # replace_dot_recursive <- function(x, expr_new) {
+  #   if (!incl_dot_sym(x)) return(dig_ast(x))
+  #
+  #   iter <- function(x) {
+  #     if (is.symbol(x) && x == ".") expr_new
+  #     else if (length(x) <= 1 && !is.call(x)) x
+  #     else if (x[[1]] == "~") as.call(c(quote(`~`), lapply(as.list(x[-1]), dig_ast)))
+  #     else if (is_magrittr_call(x)) build_pipe_call(get_pipe_info(x), expr_new)
+  #     else if (is.pairlist(x)) as.pairlist(lapply(x, iter))
+  #     else as.call(lapply(x, iter))
+  #   }
+  #   print(environment())
+  #   print(environment(iter))
+  #   iter(x)
+  # }
+
+
+
   replace_dot_recursive <- function(x, expr_new) {
     if (!incl_dot_sym(x)) return(dig_ast(x))
 
-    iter <- function(x, expr_new) {
-      if (is.symbol(x) && x == ".") expr_new
-      else if (length(x) <= 1 && !is.call(x)) x
-      else if (x[[1]] == "~") as.call(c(quote(`~`), lapply(as.list(x[-1]), dig_ast)))
-      else if (is_magrittr_call(x)) build_pipe_call(get_pipe_info(x), expr_new)
-      else if (is.pairlist(x)) as.pairlist(lapply(x, iter, expr_new))
-      else as.call(lapply(x, iter, expr_new))
-    }
-
-    iter(x, expr_new)
+    iter_ <- make_dig_with_ifs(quote(
+      if (is.symbol(expr_) && expr_ == ".")
+        expr_new
+      else if (length(expr_) > 1 && expr_[[1]] == "~")
+        as.call(c(quote(`~`), lapply(as.list(expr_[-1]), dig_ast)))
+      else if (is_magrittr_call(expr_))
+        build_pipe_call(get_pipe_info(expr_), expr_new)
+    ))
+    iter_(x)
   }
-
 
   replace_direct_dot <- function(x, expr_new) {
     as.call(lapply(x, function(y) {
@@ -240,10 +258,13 @@ demagrittr <- (function() {
   #   else if (is.pairlist(x)) as.pairlist(lapply(x, dig_ast))
   #   else as.call(lapply(x, dig_ast))
   # }
-  dig_ast <- make_dig_with_ifs(quote(
-    if (need_dplyr_modify(expr_)) pre_arrange_dplyr(expr_)
-    else if (is_magrittr_call(expr_)) build_pipe_call(get_pipe_info(expr_), NULL)
-  ))
+  dig_ast <- function(x) {
+    iter_ <- make_dig_with_ifs(quote(
+      if (need_dplyr_modify(expr_)) pre_arrange_dplyr(expr_)
+      else if (is_magrittr_call(expr_)) build_pipe_call(get_pipe_info(expr_), NULL)
+    ))
+    iter_(x)
+  }
 
 
   # returns this function
