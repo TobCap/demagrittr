@@ -63,13 +63,6 @@ demagrittr <- (function() {
     ifs <- substitute(ifs_expr)
     if (!"expr_" %in% all.names(ifs)) stop("need to use 'expr_' in ifs clause")
 
-    add_else <- function(prev_, next_) {
-      if (prev_[[1]] != "if") stop("not `if` clause")
-
-      if (length(prev_) == 3) as.call(c(as.list(prev_), next_))
-      else as.call(c(prev_[[1]], prev_[[2]], prev_[[3]], add_else(prev_[[4]], next_)))
-    }
-
     body_base <- quote(
       if (length(expr_) <= 1 && !is.recursive(expr_))
         expr_
@@ -78,11 +71,27 @@ demagrittr <- (function() {
       else
         as.call(lapply(expr_, iter_))
     )
-    iter_ <- eval(call("function", as.pairlist(alist(expr_=)), add_else(ifs, body_base))
-                  , enclos = env_)
-    environment(iter_) <- env_
-    iter_
-    # need iter_ because of using from recursive function call
+    add_else <- function(prev_, next_) {
+      if (prev_[[1]] != "if") stop("not `if` clause")
+
+      if (length(prev_) == 3)
+        as.call(c(as.list(prev_), next_))
+      else as.call(
+        c(prev_[[1]], prev_[[2]], prev_[[3]], add_else(prev_[[4]], next_)))
+    }
+
+    f_body <- add_else(ifs, body_base)
+
+    q_f <- bquote(
+      function (x) {
+        iter_ <- function(expr_) {
+          .(f_body)
+        }
+        iter_(x)
+      }
+    )
+
+    eval(q_f, env_)
   }
 
   replace_dot_recursive <- function(x, expr_new) {
@@ -229,13 +238,12 @@ demagrittr <- (function() {
     })))
   }
 
-  dig_ast <- function(x) {
-    iter_ <- make_dig_with_ifs(
-      if (need_dplyr_modify(expr_)) pre_arrange_dplyr(expr_)
-      else if (is_magrittr_call(expr_)) build_pipe_call(get_pipe_info(expr_), NULL)
-    )
-    iter_(x)
-  }
+  dig_ast <- make_dig_with_ifs(
+    if (need_dplyr_modify(expr_)) pre_arrange_dplyr(expr_)
+    else if (is_magrittr_call(expr_)) build_pipe_call(get_pipe_info(expr_), NULL)
+  )
+
+
 
 
   # returns this function
