@@ -97,7 +97,7 @@ demagrittr <- (function() {
   replace_dot_recursive <- function(x, expr_new) {
     if (!incl_dot_sym(x)) return(dig_ast(x))
 
-    iter_ <- make_dig_with_ifs(
+    do_func <- make_dig_with_ifs(
       if (is.symbol(expr_) && expr_ == ".")
         expr_new
       else if (length(expr_) > 1 && expr_[[1]] == "~")
@@ -105,7 +105,9 @@ demagrittr <- (function() {
       else if (is_magrittr_call(expr_))
         build_pipe_call(get_pipe_info(expr_), expr_new)
     )
-    iter_(x)
+
+    do_func(x)
+
   }
 
   replace_direct_dot <- function(x, expr_new) {
@@ -182,13 +184,13 @@ demagrittr <- (function() {
   }
 
   reaplace_rhs_with_exit <- function(expr, from_sym, to_sym) {
-    iter_ <- make_dig_with_ifs(
+    do_func <- make_dig_with_ifs(
       if (is_magrittr_call(expr_))
         as.call(list(expr_[[1]], iter_(expr_[[2]]), expr_[[3]]))
       else if (length(expr_) == 1 && is.symbol(expr_) && identical(expr_, from_sym))
         to_sym
     )
-    iter_(expr)
+    do_func(expr)
   }
 
   replace_rhs_origin <- function(rhs, replace_sym) {
@@ -242,9 +244,6 @@ demagrittr <- (function() {
     if (need_dplyr_modify(expr_)) pre_arrange_dplyr(expr_)
     else if (is_magrittr_call(expr_)) build_pipe_call(get_pipe_info(expr_), NULL)
   )
-
-
-
 
   # returns this function
   function(expr_, eval_ = FALSE) {
