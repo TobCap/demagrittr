@@ -13,7 +13,7 @@ test_that("equiv value8", {
     }
   )
 
-  expect_identical(eval(e1), eval(demagrittr(e1)))
+  expect_identical(eval(e1), eval(demagrittr(e1, FALSE)))
 
   e2 <- quote(
     iris %>% dplyr::filter(Species == "setosa") %$% {
@@ -22,7 +22,6 @@ test_that("equiv value8", {
       res <<- (.)
     }
   )
-  expect_identical(eval(e2), eval(demagrittr(e2)))
-
+  expect_identical(eval(e2), eval(demagrittr(e2, FALSE)))
 
 })

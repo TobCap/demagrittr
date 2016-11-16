@@ -16,7 +16,7 @@ test_that("equiv value", {
       } %>%
       summary
     })
-  expect_identical(eval(e1), eval(demagrittr(e1)))
+  expect_identical(eval(e1), eval(demagrittr(e1, FALSE)))
 
   # Tee operations
   e2 <- quote({
@@ -26,7 +26,7 @@ test_that("equiv value", {
       plot %>% # plot usually does not return anything.
       colSums
   })
-  expect_identical(eval(e2), eval(demagrittr(e2)))
+  expect_identical(eval(e2), eval(demagrittr(e2, FALSE)))
 
   # Pipe with exposition of variables
   e3 <- quote({
@@ -34,7 +34,7 @@ test_that("equiv value", {
       subset(Sepal.Length > mean(Sepal.Length)) %$%
       cor(Sepal.Length, Sepal.Width)
   })
-  expect_identical(eval(e3), eval(demagrittr(e3)))
+  expect_identical(eval(e3), eval(demagrittr(e3, FALSE)))
 
   # Compound assignment pipe operations
   e4 <- quote({
@@ -42,7 +42,7 @@ test_that("equiv value", {
     iris$Sepal.Length %<>% sqrt
     iris
   })
-  expect_identical(eval(e4), eval(demagrittr(e4)))
+  expect_identical(eval(e4), eval(demagrittr(e4, FALSE)))
 
 
 })
