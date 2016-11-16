@@ -4,12 +4,12 @@
 \alias{demagrittr}
 \title{Decompile magrittr's syntax to normal R's syntax}
 \usage{
-demagrittr(expr_, eval_ = FALSE)
+demagrittr(expr, is_NSE = TRUE)
 }
 \arguments{
-\item{expr_}{expression with magrittr functions such as "\%>\%"}
+\item{expr}{expression with magrittr functions such as "\%>\%"}
 
-\item{eval_}{evaluate the result if value is TRUE}
+\item{is_NSE}{if TRUE, expr is not evaluated.}
 }
 \description{
 Semantics of \code{\%>\%} is eager evaluation, the example of magrittr
