@@ -10,7 +10,7 @@ test_that("equiv value", {
       aggregate(. ~ cyl, data = ., FUN = . %>% mean %>% round(2)) %>%
       transform(kpl = mpg %>% multiply_by(0.4251))
   })
-  expect_identical(eval(e1), eval(demagrittr(e1)))
+  expect_identical(eval(e1), eval(demagrittr(e1, FALSE)))
 
   e2 <- quote({
     car_data %>%
@@ -20,7 +20,7 @@ test_that("equiv value", {
         else x
       })
   })
-  expect_identical(eval(e2), eval(demagrittr(e2)))
+  expect_identical(eval(e2), eval(demagrittr(e2, FALSE)))
 
   e3 <- quote({
     car_data %>%
@@ -30,17 +30,17 @@ test_that("equiv value", {
       else .
     }
   })
-  expect_identical(eval(e3), eval(demagrittr(e3)))
+  expect_identical(eval(e3), eval(demagrittr(e3, FALSE)))
 
   e4 <- quote({
     1:10 %>% (substitute(f(), list(f = sum)))
   })
-  expect_identical(eval(e4), eval(demagrittr(e4)))
+  expect_identical(eval(e4), eval(demagrittr(e4, FALSE)))
 
   e41 <- quote({
     1:5 %>% (call("sum", 100))
   })
-  expect_identical(eval(e41), eval(demagrittr(e41)))
+  expect_identical(eval(e41), eval(demagrittr(e41, FALSE)))
 
   e5 <- quote({
     set.seed(1)
@@ -52,7 +52,7 @@ test_that("equiv value", {
         head(.)
       }
   })
-  expect_identical(eval(e5), eval(demagrittr(e5)))
+  expect_identical(eval(e5), eval(demagrittr(e5, FALSE)))
 
   e6 <- quote({
     set.seed(1)
@@ -62,7 +62,7 @@ test_that("equiv value", {
       head(.)
     }
   })
-  expect_identical(eval(e6), eval(demagrittr(e6)))
+  expect_identical(eval(e6), eval(demagrittr(e6, FALSE)))
 
 
 })

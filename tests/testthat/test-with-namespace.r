@@ -6,7 +6,7 @@ test_that("equiv value7", {
   e2 <- quote(Nile %>% base::mean()) # run
   e3 <- quote(Nile %>% base::mean(.)) # run
 
-  expect_error(eval(demagrittr(e1)))
-  expect_identical(eval(e2), eval(demagrittr(e2)))
-  expect_identical(eval(e3), eval(demagrittr(e3)))
+  expect_error(eval(demagrittr(e1, FALSE)))
+  expect_identical(eval(e2), eval(demagrittr(e2, FALSE)))
+  expect_identical(eval(e3), eval(demagrittr(e3, FALSE)))
 })

@@ -1,18 +1,27 @@
 Package: demagrittr
 Type: Package
 Title: Decompile magrittr's Syntax to Normal R's Syntax
-Version: 0.0.2
-Date: 2016-05-28
+Version: 0.0.3
+Date: 2016-11-18
 Authors@R: person("tob", "", email = "tobakucapitalism@gmail.com",
   role = c("aut", "cre"))
-Description: Decompile magrittr's syntax to normal R's syntax.
+Description: 
+    Using forward-pipe operator, %>%, is extremely useful both reading
+    and writing code-flows, but debugging and understanding deeply
+    nested pipes are bit difficult due to magrittr's complicated 
+    mechanism. This package convert %>% syntax to eager evaluation and
+    you can easily understand meaning of codes.
 License: MIT + file LICENSE
+Imports:
+    methods
 Suggests:
+    magrittr,
     testthat,
     knitr,
     rmarkdown,
-    magrittr,
     dplyr
+Depends: R(>= 2.10.0)
 VignetteBuilder: knitr
 RoxygenNote: 5.0.1
 BugReports: https://github.com/tobcap/demagrittr/issues
+ByteCompile: Yes
