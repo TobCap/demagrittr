@@ -9,8 +9,8 @@
 #'
 #' @examples
 #' tmp_dir <- tempdir()
-#' in_path <- paste0(tmp_dir, "test_in.r")
-#' out_path <- paste0(tmp_dir, "test_out.r")
+#' in_path <- file.path(tmp_dir, "test_in.r")
+#' out_path <- file.path(tmp_dir, "test_out.r")
 #'
 #' writeLines(
 #' "
@@ -20,22 +20,25 @@
 #'   filter(b >= 8)
 #' ", in_path)
 #'
-#' demagrittr_source(in_path, out_path)
+#' demagrittr_source(in_path, out_path, ask=FALSE)
 #'
-#' system(sprintf("cat %s", in_path))
-#' system(sprintf("cat %s", out_path))
+#' # input file
+#' cat(paste0(readLines(in_path), collapse="\n"))
+#' # output file
+#' cat(paste0(readLines(out_path), collapse="\n"))
+#'
 #'
 #' @export
-demagrittr_source <- function(in_, out_) {
+demagrittr_source <- function(in_, out_, ask = TRUE) {
   stopifnot(file.exists(in_))
 
-  if (file.exists(out_)) {
+  if (ask && file.exists(out_)) {
     ans <- readline(prompt = paste0(out_, " exists. do you allow over write? (y/n) \n"))
     if (!tolower(ans) %in% c("y", "yes")) {
         stop("stopped")
     }
   } else {
-    out_fullpath <- normalizePath("b.txt",mustWork = FALSE)
+    out_fullpath <- normalizePath("b.txt", mustWork = FALSE)
     out_dir <- dirname(out_fullpath)
     if (!dir.exists(out_dir))
       stop("output directory does not exist.")

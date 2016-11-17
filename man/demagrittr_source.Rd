@@ -4,7 +4,7 @@
 \alias{demagrittr_source}
 \title{Convert R's source file to non \%>\% code.}
 \usage{
-demagrittr_source(in_, out_)
+demagrittr_source(in_, out_, ask = TRUE)
 }
 \arguments{
 \item{in_}{file path of input.}
@@ -31,7 +31,7 @@ y <- x \%>\%
   filter(b >= 8)
 ", in_path)
 
-demagrittr_source(in_path, out_path)
+demagrittr_source(in_path, out_path, ask=FALSE)
 
 system(sprintf("cat \%s", in_path))
 system(sprintf("cat \%s", out_path))
