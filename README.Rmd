@@ -1,0 +1,198 @@
+---
+output: github_document
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, echo = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  fig.path = "README-"
+)
+```
+
+# demagrittr
+
+## What is this package?
+demagrittr() converts magrittr's syntax to eager evaluation syntax for
+the purpose of: 
+
++ understanding quite complicated and nested piped sentences
++ debugging when an error occurs
++ run-time reduction (if `%>%` is heavily used inside a long loop)
+
+This is experimental and not fully tested, so I would be glad
+if you could inform me of any misunderstandings or mistakes.  
+
+## Installation
+```{r eval=FALSE}
+# install.packages("devtools")
+devtools::install_github("tobcap/demagrittr")
+library("demagrittr")
+```
+
+```{r include=FALSE}
+library(magrittr)
+library(demagrittr)
+```
+
+## Usage
+```{r}
+# NSE
+demagrittr(x %>% f %>% g %>% h)
+
+# Manipulating language object (use quote())
+expr0 <- quote(x %>% f %>% g %>% h)
+demagrittr(expr0, FALSE)
+```
+
+## Compile and evaluate
+```{r}
+compiled0 <- demagrittr(1:10 %>% sum %>% log %>% sin)
+print(compiled0)
+eval(compiled0)
+```
+
+## Pipe for building anonymous function
+```{r}
+demagrittr(. %>% cos %>% sin %>% sum)
+```
+
+## Tee operations
+```{r}
+demagrittr(
+  rnorm(200) %>%
+  matrix(ncol = 2) %T>%
+  plot %>% # plot usually does not return anything.
+  colSums
+)
+```
+
+## Pipe with exposition of variables
+```{r}
+demagrittr({
+iris %>%
+  subset(Sepal.Length > mean(Sepal.Length)) %$%
+  cor(Sepal.Length, Sepal.Width)
+
+data.frame(z = rnorm(100)) %$%
+  ts.plot(z)
+})
+```
+
+## Compound assignment pipe operations
+```{r}
+demagrittr({
+iris$Sepal.Length <- 
+  iris$Sepal.Length %>%
+  sqrt
+  
+iris$Sepal.Length %<>% sqrt   
+})
+```
+
+## Benchmarking
+```{r}
+e <- quote(
+ for (i in 1:10000) {
+   i %>%
+     identity %>%
+     identity %>%
+     identity %>%
+     identity
+ }
+)
+
+system.time(eval(e))
+system.time(eval(demagrittr(e, FALSE)))
+```
+
+```{r}
+library("microbenchmark")
+library("magrittr")
+library("pipeR")
+library("demagrittr")
+
+expr1 <- quote(1:10 %>% sum %>% log %>% sin)
+expr2 <- demagrittr(expr1, FALSE)
+expr3 <- quote(1:10 %>>% sum %>>% log %>>% sin)
+
+microbenchmark(
+    "%>%" = eval(expr1)
+  , demagrittr = eval(expr2)
+  , "%>>%" = eval(expr3)
+  , times = 1e3)
+
+identical(eval(expr1), eval(expr2))
+```
+
+```{r}
+# from http://renkun.me/blog/2014/08/08/difference-between-magrittr-and-pipeR.html#performance
+set.seed(1)
+expr4 <- quote(
+  lapply(1:100000, function(i) {
+    sample(letters,6,replace = T) %>%
+      paste(collapse = "") %>%
+      "=="("rstats")
+  })
+)
+expr5 <- demagrittr(expr4, FALSE)
+
+set.seed(1)
+expr6 <- quote(
+  lapply(1:100000, function(i) {
+    sample(letters,6,replace = T) %>>%
+      paste(collapse = "") %>>%
+      "=="("rstats")
+  })
+)
+
+# My poor laptop takes huge time. The unit is 'seconds'.
+microbenchmark(
+    "%>%" = eval(expr4)
+  , demagrittr = eval(expr5)
+  , "%>>%" = eval(expr6)
+  , times = 1)
+
+identical(eval(expr4), eval(expr5))
+
+```
+
+# Compiling source code
+```{r}
+tmp_dir <- tempdir()
+in_path <- file.path(tmp_dir, "test_in.r")
+out_path <- file.path(tmp_dir, "test_out.r")
+
+writeLines(
+"
+x <- data.frame(a = 1:5, b = 6:10)
+y <- x %>%
+  select(b) %>%
+  filter(b >= 8)
+", in_path)
+
+demagrittr_source(in_path, out_path, ask = FALSE)
+# input file
+cat(paste0(readLines(in_path), collapse="\n"))
+
+# output file
+cat(paste0(readLines(out_path), collapse="\n"))
+
+```
+
+# Known problems
+* Not guaranteed to preserve the same visibility of a result when evaluating
+(printing the result or not in your console)
+* `#tmp{n}` is used for the prefix-name of temporary symbols in the converted
+language object. So there will be overwritting if you have already created
+such a symbol in the environment where you want to evaluate a language object
+convertedy by `demagrittr()`. (hope nobody uses such a tricky name as a symbol)
+
+# To-Do
+* `demagrittr_lazy()`: convert lazy evaluation like
+```r
+demagrittr_lazy(x %>% f %>% g)
+#> g(f(x))
+```
