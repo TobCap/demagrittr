@@ -6,7 +6,7 @@ demagrittr
 What is this package?
 ---------------------
 
-demagrittr() converts magrittr's syntax to eager evaluation syntax for the purpose of:
+`demagrittr()` and `demagrittr_source()` converts magrittr's syntax to eager evaluation syntax for the purpose of:
 
 -   understanding quite complicated and nested piped sentences
 -   debugging when an error occurs
@@ -37,7 +37,7 @@ demagrittr(x %>% f %>% g %>% h)
 #>     `#tmp3`
 #> }
 
-# Manipulating language object (use quote())
+# Manipulation for a language object
 expr0 <- quote(x %>% f %>% g %>% h)
 demagrittr(expr0, FALSE)
 #> {
@@ -49,8 +49,8 @@ demagrittr(expr0, FALSE)
 #> }
 ```
 
-Compile and evaluate
---------------------
+Compiling and evaluation
+------------------------
 
 ``` r
 compiled0 <- demagrittr(1:10 %>% sum %>% log %>% sin)
@@ -66,18 +66,24 @@ eval(compiled0)
 #> [1] -0.7615754
 ```
 
-Pipe for building anonymous function
-------------------------------------
+Building (unary) functions
+--------------------------
 
 ``` r
-demagrittr(. %>% cos %>% sin %>% sum)
-#> function(.) {
+demagrittr(f <- . %>% cos %>% sin)
+#> f <- function(.) {
 #>     `#tmp4` <- .
 #>     `#tmp5` <- cos(`#tmp4`)
 #>     `#tmp6` <- sin(`#tmp5`)
-#>     `#tmp7` <- sum(`#tmp6`)
-#>     `#tmp7`
+#>     `#tmp6`
 #> }
+
+# The resul is just a language object. You need to eval().
+eval(demagrittr(f <- . %>% cos %>% sin))
+f(1)
+#> [1] 0.5143953
+sin(cos(1))
+#> [1] 0.5143953
 ```
 
 Tee operations
@@ -167,10 +173,10 @@ e <- quote(
 
 system.time(eval(e))
 #>    user  system elapsed 
-#>    4.23    0.02    4.62
+#>    5.61    0.02    5.64
 system.time(eval(demagrittr(e, FALSE)))
 #>    user  system elapsed 
-#>    0.11    0.00    0.12
+#>    0.09    0.00    0.10
 ```
 
 ``` r
@@ -189,10 +195,10 @@ microbenchmark(
   , "%>>%" = eval(expr3)
   , times = 1e3)
 #> Unit: microseconds
-#>        expr     min      lq     mean   median       uq      max neval
-#>         %>% 415.034 432.866 515.9865 445.1255 486.1385 6284.349  1000
-#>  demagrittr  14.266  16.496  28.0559  20.0620  21.8450 3570.805  1000
-#>        %>>% 200.162 209.524 262.9248 221.1140 240.7290 4377.245  1000
+#>        expr     min      lq      mean   median      uq      max neval
+#>         %>% 337.021 369.564 481.86102 437.3245 482.127 6280.788  1000
+#>  demagrittr  11.145  16.049  22.11929  18.7240  21.176 1982.445  1000
+#>        %>>% 164.053 187.234 243.93021 217.1020 241.175 3678.691  1000
 
 identical(eval(expr1), eval(expr2))
 #> [1] TRUE
@@ -227,9 +233,9 @@ microbenchmark(
   , times = 1)
 #> Unit: seconds
 #>        expr       min        lq      mean    median        uq       max
-#>         %>% 69.309453 69.309453 69.309453 69.309453 69.309453 69.309453
-#>  demagrittr  5.191236  5.191236  5.191236  5.191236  5.191236  5.191236
-#>        %>>% 23.075393 23.075393 23.075393 23.075393 23.075393 23.075393
+#>         %>% 64.468622 64.468622 64.468622 64.468622 64.468622 64.468622
+#>  demagrittr  4.907491  4.907491  4.907491  4.907491  4.907491  4.907491
+#>        %>>% 21.258164 21.258164 21.258164 21.258164 21.258164 21.258164
 #>  neval
 #>      1
 #>      1
