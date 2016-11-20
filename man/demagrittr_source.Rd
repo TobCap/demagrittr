@@ -10,6 +10,8 @@ demagrittr_source(in_, out_, ask = TRUE)
 \item{in_}{file path of input.}
 
 \item{out_}{file path of output.}
+
+\item{ask}{ask to overwrite when `out_`` already exists}
 }
 \value{
 no return. side effect on a file.
@@ -20,8 +22,8 @@ read file and convert the code which uses %>%
 }
 \examples{
 tmp_dir <- tempdir()
-in_path <- paste0(tmp_dir, "test_in.r")
-out_path <- paste0(tmp_dir, "test_out.r")
+in_path <- file.path(tmp_dir, "test_in.r")
+out_path <- file.path(tmp_dir, "test_out.r")
 
 writeLines(
 "
@@ -33,8 +35,11 @@ y <- x \%>\%
 
 demagrittr_source(in_path, out_path, ask=FALSE)
 
-system(sprintf("cat \%s", in_path))
-system(sprintf("cat \%s", out_path))
+# input file
+cat(paste0(readLines(in_path), collapse="\\n"))
+# output file
+cat(paste0(readLines(out_path), collapse="\\n"))
+
 
 }
 

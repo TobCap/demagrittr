@@ -4,6 +4,7 @@
 #'
 #' @param in_ file path of input.
 #' @param out_ file path of output.
+#' @param ask ask to overwrite when `out_`` already exists
 #'
 #' @return no return. side effect on a file.
 #'
