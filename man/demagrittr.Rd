@@ -2,7 +2,6 @@
 % Please edit documentation in R/demagrittr.R
 \name{demagrittr}
 \alias{demagrittr}
-\alias{demagrittr}
 \title{Decompile magrittr's syntax to normal R's syntax}
 \usage{
 demagrittr(expr, is_NSE = TRUE, as_lazy = FALSE)
@@ -13,11 +12,10 @@ demagrittr(expr, is_NSE = TRUE, as_lazy = FALSE)
 \item{is_NSE}{if TRUE, expr is not evaluated.}
 }
 \description{
-Semantics of \code{\%>\%} is eager evaluation, the example of
- magrittr is not accurate. \code{x \%>\% f} is not equivalent to
- \code{f(x)} but equals to \code{{tmp <- x; f(tmp)}} or
- \code{{force(x); f(x)}}.
- demagrittr() converts magrittr's syntax to such eager evaluation.
+Semantics of \code{\%>\%} is eager evaluation, the example of magrittr
+ is not accurate. \code{x \%>\% f} is not equivalent to \code{f(x)} but equals to
+ \code{{tmp <- x; f(tmp)}} or \code{{force(x); f(x)}}. demagrittr() converts magrittr's syntax to such eager
+ evaluation.
 }
 \examples{
 demagrittr(x \%>\% f)
@@ -31,4 +29,3 @@ demagrittr(x \%>\% f(y = nrow(.), z = ncol(.)))
 demagrittr(x \%>\% {f(y = nrow(.), z = ncol(.))})
 
 }
-
