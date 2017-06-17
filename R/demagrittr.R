@@ -6,6 +6,7 @@
 #'
 #' @param expr expression with magrittr functions such as "\%>\%"
 #' @param is_NSE if TRUE, expr is not evaluated.
+#' @param as_lazy if TRUE, pipe streams are formed into nest of call offunctions.
 #'
 #' @examples
 #' demagrittr(x %>% f)
@@ -24,11 +25,11 @@ demagrittr <- function(expr, is_NSE = TRUE, as_lazy = FALSE) {
   #assign("var_id", 0L, envir = env)
   on.exit({
     assign("var_id", 0L, envir = env)
-    assing("as_lazy", FALSE, envir = env)
+    assign("as_lazy", FALSE, envir = env)
     rm_tmp_symbols_if_exists()
   })
   assign("pf_", parent.frame(), envir = env)
-  assing("as_lazy", as_lazy, envir = env)
+  assign("as_lazy", as_lazy, envir = env)
 
   e0 <- if (is_NSE) substitute(expr) else expr
 

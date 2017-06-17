@@ -10,6 +10,8 @@ demagrittr(expr, is_NSE = TRUE, as_lazy = FALSE)
 \item{expr}{expression with magrittr functions such as "\%>\%"}
 
 \item{is_NSE}{if TRUE, expr is not evaluated.}
+
+\item{as_lazy}{if TRUE, pipe streams are formed into nest of call offunctions.}
 }
 \description{
 Semantics of \code{\%>\%} is eager evaluation, the example of magrittr
