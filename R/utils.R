@@ -1,10 +1,7 @@
 # ops <- c("%>%", "%T>%", "%$%", "%<>%")
-# dplyr_funs <- c(
-#   "filter", "slice", "arrange", "select", "rename", "distinct"
-# , "mutate", "transmute", "summarise", "summarize")
 # regexp_meta <- c(".", "\\", "|", "(", ")" , "[", "{", "^", "$", "*", "+", "?")
 # varname_prefix <- "#tmp"
-# devtools::use_data(ops, dplyr_funs, regexp_meta, varname_prefix,
+# devtools::use_data(ops, regexp_meta, varname_prefix,
 #                    internal=TRUE, overwrite = TRUE)
 pf_ <- NULL
 var_id <- 0L
@@ -207,32 +204,7 @@ get_pipe_info <- function(x, acc = NULL) {
     get_pipe_info(x[[2]], c(list(list(op = x[[1]], rhs = x[[3]])), acc))
 }
 
-need_dplyr_modify <- function(x) {
-  if (length(x) > 1 && length(x[[1]]) == 1) {
-    any(as.character(x[[1]]) == dplyr_funs) &&
-      any(vapply(as.list(x)[-1], is_magrittr_call, logical(1)))
-  } else if (length(x) > 1 && length(x[[1]]) > 1) {
-    # dplyr::filter(...) or dplyr:::filter(...)
-    as.character(x[[1]]) == "dplyr" &&
-      any(as.character(x[[3]]) == dplyr_funs) &&
-      any(vapply(as.list(x)[-1], is_magrittr_call, logical(1)))
-  } else
-    FALSE
-}
-
-pre_arrange_dplyr <- function(x) {
-  # x is like `filter(iris, Sepal.Width %>% is_greater_than(4.3))`
-  as.call(c(x[[1]], lapply(as.list(x)[-1], function(y) {
-    if (is_magrittr_call(y))
-      build_pipe_call(get_pipe_info(y), NULL, use_assign_sym = TRUE)
-    else
-      y
-  })))
-}
-
 dig_ast <- make_dig_with_ifs(
-  if (need_dplyr_modify(expr_))
-    pre_arrange_dplyr(expr_)
-  else if (is_magrittr_call(expr_))
+  if (is_magrittr_call(expr_))
     build_pipe_call(get_pipe_info(expr_), NULL)
 )
