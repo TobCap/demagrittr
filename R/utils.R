@@ -128,11 +128,17 @@ replace_direct_dot <- function(x, expr_new) {
 }
 
 get_rhs_brace <- function(rhs_, sym_prev) {
+  # magrittr can evaluate below language syntax, but it should have to be error.
+  # language: `1:10 %>% (substitute(f(), list(f = sum)))`
+  # closure: `1 %>% (function(x) x + 1))'
+  #          '1 %>% (2 %>% (function(x) function(y) x + y))`
+
   rhs_mod <- eval(rhs_, pf_)
+
   switch(
     typeof(rhs_mod)
     , "language" = build_pipe_call(get_pipe_info(call("%>%", sym_prev, rhs_mod)), NULL)
-    , as.call(c(rhs_mod, sym_prev))
+    , as.call(c(dig_ast(rhs_), sym_prev))
   )
 }
 

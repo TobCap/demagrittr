@@ -30,4 +30,8 @@ test_that("equiv value5", {
   e7 <- quote(1:3 %>% sum(., (. - 1) %>% `^`(sum(.))))
   expect_identical(eval(e7), eval(demagrittr(e7, FALSE)))
 
+  # magrittr occurs error, but syntaxically it should have to be evaluated
+  e8 <- quote(1 %>% (2 %>% (function(x) function(y) x + y)))
+  expect_identical(eval(demagrittr(e8, FALSE)), 3)
+  expect_error(eval(e8))
 })
