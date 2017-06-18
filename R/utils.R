@@ -40,7 +40,7 @@ make_lambda <- function(body_) {
   call("function", arg_, wrap(body_, FALSE))
 }
 
-make_dig_with_ifs <- function(ifs_expr, env_ = parent.frame()) {
+construct_lang_manipulation <- function(ifs_expr, env_ = parent.frame()) {
   ifs <- substitute(ifs_expr)
   if (!"expr_" %in% all.names(ifs)) {
     stop("need to use 'expr_' in ifs clause")
@@ -86,7 +86,7 @@ replace_dot_recursive <- function(x, expr_new) {
     return(dig_ast(x))
   }
 
-  do_func <- make_dig_with_ifs(
+  do_func <- construct_lang_manipulation(
     if (is.symbol(expr_) && expr_ == ".") {
       expr_new
     } else if (length(expr_) > 1 && expr_[[1]] == "~") {
@@ -188,7 +188,7 @@ wrap <- function(lst, reassign = FALSE, use_assign_sym = FALSE) {
 }
 
 reaplace_rhs_with_exit <- function(expr, from_sym, to_sym) {
-  do_func <- make_dig_with_ifs(
+  do_func <- construct_lang_manipulation(
     if (is_magrittr_call(expr_)) {
       as.call(list(expr_[[1]], iter_(expr_[[2]]), expr_[[3]]))
     } else if (length(expr_) == 1 &&
@@ -234,7 +234,7 @@ get_pipe_info <- function(x, acc = NULL) {
   }
 }
 
-dig_ast <- make_dig_with_ifs(
+dig_ast <- construct_lang_manipulation(
   if (is_magrittr_call(expr_)) {
     build_pipe_call(get_pipe_info(expr_), NULL)
   }
