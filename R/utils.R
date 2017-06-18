@@ -52,6 +52,11 @@ make_lambda <- function(body_) {
   call("function", arg_, wrap(body_, FALSE))
 }
 
+make_lambda_lazy <- function(body_) {
+  arg_ <- as.vector(list(. = quote(expr=)), "pairlist")
+  call("function", arg_, wrap_lazy(body_, FALSE))
+}
+
 construct_lang_manipulation <- function(ifs_expr, env_ = parent.frame()) {
   ifs <- substitute(ifs_expr)
   if (!"expr_" %in% all.names(ifs)) {
@@ -165,6 +170,19 @@ make_last_lang <- function(acc_, first_sym, sym_prev_, reassign) {
   }
 }
 
+wrap_lazy <- function(lst, reassign = FALSE) {
+  # browser()
+  # NULL
+  iter <- function(l, acc = NULL) {
+    if (length(l) == 0) {
+      acc
+    } else {
+      iter(l[-1], as.call(list(l[[1]]$rhs, acc)))
+    }
+  }
+  iter(lst[-1], lst[[1]]$rhs)
+}
+
 wrap <- function(lst, reassign = FALSE, use_assign_sym = FALSE) {
 
   sym <- make_varname(as_symbol = !use_assign_sym)
@@ -222,18 +240,30 @@ replace_rhs_origin <- function(rhs, replace_sym) {
   }
 }
 
+is_pipe_lambda <- function(origin, first_op) {
+  length(origin) == 1 && origin == "." && first_op == "%>%"
+}
+
 build_pipe_call <- function(lst, replace_sym, use_assign_sym = FALSE) {
   origin <- lst[[1]]$rhs
   first_op <- lst[[2]]$op # `lst` should have more than one element
 
-  if (length(origin) == 1 && origin == "." && first_op == "%>%") {
-    make_lambda(lst)
-  } else if (is.null(replace_sym)) {
-    wrap(lst, first_op == "%<>%", use_assign_sym)
+  if (as_lazy) {
+    if (is_pipe_lambda(origin, first_op)) {
+      make_lambda_lazy(lst)
+    } else {
+      wrap_lazy(lst)
+    }
   } else {
-    # this is called x %>% {(. + 1) %>% f}
-    lst[[1]]$rhs <- replace_rhs_origin(origin, replace_sym)
-    wrap(lst, first_op == "%<>%", use_assign_sym)
+    if (is_pipe_lambda(origin, first_op)) {
+      make_lambda(lst)
+    } else if (is.null(replace_sym)) {
+      wrap(lst, first_op == "%<>%", use_assign_sym)
+    } else {
+      # this is called x %>% {(. + 1) %>% f}
+      lst[[1]]$rhs <- replace_rhs_origin(origin, replace_sym)
+      wrap(lst, first_op == "%<>%", use_assign_sym)
+    }
   }
 }
 
