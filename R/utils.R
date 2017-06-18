@@ -12,6 +12,18 @@ is_magrittr_call <- function(x) length(x) == 3 &&
 incl_magrittr_ops <- function(x) any(all.names(x) %in% ops)
 incl_dot_sym <- function(x) any(all.names(x) %in% ".")
 
+init_ <- function(pf_, as_lazy) {
+  pkg_env <- parent.env(environment()) # getNamespace("demagrittr")
+
+  rm_tmp_symbols_if_exists(pf_)
+  assign("var_id", 0L, envir = pkg_env)
+  assign("as_lazy", as_lazy, envir = pkg_env)
+  assign("pf_", pf_, envir = pkg_env)
+
+  invisible()
+}
+
+
 make_varname <- function(prefix = varname_prefix, as_symbol = TRUE) {
   if (any(strsplit(prefix, "")[[1]] %in% regexp_meta)) {
     stop("cannot use regexp_meta_char in `prefix` of make_varname()")
@@ -29,10 +41,10 @@ make_varname <- function(prefix = varname_prefix, as_symbol = TRUE) {
   }
 }
 
-rm_tmp_symbols_if_exists <- function() {
+rm_tmp_symbols_if_exists <- function(env) {
   rm(list = ls(pattern = paste0("^", varname_prefix, "*")
-   , envir = pf_, all.names = TRUE)
-   , envir = pf_)
+   , envir = env, all.names = TRUE)
+   , envir = env)
 }
 
 make_lambda <- function(body_) {
