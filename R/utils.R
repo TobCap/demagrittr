@@ -53,7 +53,9 @@ make_lambda <- function(body_) {
 }
 
 make_lambda_lazy <- function(body_) {
-  arg_ <- as.vector(list(. = quote(expr=)), "pairlist")
+  # change format from `.` to `..` to prevent recursive transform of `.`
+  arg_ <- as.vector(list(.. = quote(expr=)), "pairlist")
+  body_[[1]]$rhs <- quote(..)
   call("function", arg_, wrap_lazy(body_, FALSE))
 }
 
