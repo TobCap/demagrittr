@@ -188,14 +188,48 @@ make_last_lang <- function(acc_, first_sym, sym_prev_, reassign) {
 }
 
 wrap_lazy <- function(lst, reassign = FALSE) {
+  # x %>% f; x %>% f(); x %>% f(.);
+  # 1:10 %>% sum(100) => sum(1:10, 100)
+  # 1:10 %>% sum(length(.)) => sum(1:10, length(1:10))
+  # 1:10 %>% sum(length(.), .) => sum(length(1:10), 1:10)
+  # 1:10 %>% {. + 1} => {1:10 + 1}
+  # 1:10 %>% (function(x) x + 1) %>% (function(x) x + 1)(1:10)
+
   # browser()
   # NULL
   iter <- function(l, acc = NULL) {
     if (length(l) == 0) {
-      acc
-    } else {
-      iter(l[-1], as.call(list(l[[1]]$rhs, acc)))
+      return(acc)
     }
+
+    rhs_ <- l[[1]]$rhs
+    direct_dot_pos <- which(as.list(rhs_) == quote(.))
+    rhs_elem1 <- if (is.recursive(rhs_)) rhs_[[1]] else NULL
+
+    body_ <-
+      if (is.symbol(rhs_)) {
+        as.call(list(rhs_, acc))
+      } else if (length(rhs_) == 1 & is.call(rhs_)) {
+        ## rhs_elem1 should be passed recuresively
+        # > demagrittr(1 %>% (. %>% exp)(), as_lazy = TRUE)
+        # (function(.) exp(.))(1)
+        as.call(list(dig_ast(rhs_elem1), acc))
+      } else if (rhs_elem1 == "(") {
+        as.call(list(dig_ast(rhs_), acc))
+      } else if (rhs_elem1 == "{") {
+        replace_dot_recursive(rhs_, acc)
+      } else if (length(direct_dot_pos) > 0) {
+        rhs_mod <- (replace_direct_dot(rhs_, acc))
+        replace_dot_recursive(rhs_mod, acc)
+      } else if (length(direct_dot_pos) == 0) {
+        rhs_mod <- as.call(c(rhs_elem1, acc, as.list(rhs_)[-1]))
+        replace_dot_recursive(rhs_mod, acc)
+      } else {
+        stop("missing pattern in wrap_lazy()")
+      }
+
+      iter(l[-1], body_)
+
   }
   iter(lst[-1], lst[[1]]$rhs)
 }
@@ -292,6 +326,12 @@ get_pipe_info <- function(x, acc = NULL) {
   } else {
     get_pipe_info(x[[2]], c(list(list(op = x[[1]], rhs = x[[3]])), acc))
   }
+}
+
+is_colon_ops_call <- function(expr) {
+  length(expr) == 3 &&
+    length(expr[[1]]) == 1 &&
+    as.character(expr[[1]]) %in% c("::", ":::")
 }
 
 dig_ast <- construct_lang_manipulation(
