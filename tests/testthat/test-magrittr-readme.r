@@ -2,7 +2,7 @@ context("magrittr readme")
 suppressMessages(library("magrittr"))
 
 test_that("equiv value", {
-  # https://github.com/smbache/magrittr/blob/master/README.md
+  # https://github.com/tidyverse/magrittr/blob/9c75666e70e97a51fa13a831c7a5ea43134123a8/README.md
 
   # More advanced right-hand sides and lambdas
   e1 <- quote({
@@ -17,6 +17,7 @@ test_that("equiv value", {
       summary
     })
   expect_identical(eval(e1), eval(demagrittr(e1, FALSE)))
+  expect_identical(eval(e1), eval(demagrittr(e1, FALSE, as_lazy = TRUE)))
 
   # Tee operations
   e2 <- quote({

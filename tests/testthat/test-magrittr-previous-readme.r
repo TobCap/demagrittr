@@ -11,6 +11,7 @@ test_that("equiv value2", {
   ## unname() is required
   expect_identical(unname(eval(weekly)), unname(eval(demagrittr(weekly, FALSE))))
   expect_false(any(all.names(demagrittr(weekly, FALSE)) %in% "%>%"))
+  expect_false(any(all.names(demagrittr(weekly, FALSE, as_lazy = TRUE)) %in% "%>%"))
 
   windy.weeks <- quote(
     airquality %>%
@@ -19,6 +20,12 @@ test_that("equiv value2", {
     subset(Wind > 12, c(Ozone, Solar.R, Wind))
   )
 
-  expect_identical(unname(eval(windy.weeks)), unname(eval(demagrittr(windy.weeks, FALSE))))
+  expect_identical(
+    unname(eval(windy.weeks)),
+    unname(eval(demagrittr(windy.weeks, FALSE))))
   expect_false(any(all.names(demagrittr(windy.weeks, FALSE)) %in% "%>%"))
+  expect_identical(
+    unname(eval(windy.weeks)),
+    unname(eval(demagrittr(windy.weeks, FALSE, as_lazy = TRUE))))
+  expect_false(any(all.names(demagrittr(windy.weeks, FALSE, as_lazy = TRUE)) %in% "%>%"))
 })
