@@ -129,7 +129,7 @@ replace_direct_dot <- function(x, expr_new) {
   }))
 }
 
-get_rhs_brace <- function(rhs_, sym_prev) {
+get_rhs_paren <- function(rhs_, sym_prev) {
   # magrittr can evaluate below language syntax, but it should have to be error.
   # language: `1:10 %>% (substitute(f(), list(f = sum)))`
   # closure: `1 %>% (function(x) x + 1))'
@@ -155,7 +155,7 @@ get_rhs_mod <- function(direct_dot_pos, rhs_, sym_prev) {
   if (length(rhs_) == 1 && is.call(rhs_)) {
     as.call(c(rhs_elem1, sym_prev))
   } else if (rhs_elem1 == "(") {
-    get_rhs_brace(rhs_, sym_prev)
+    get_rhs_paren(rhs_, sym_prev)
   } else if (rhs_elem1 == "{") {
     replace_dot_recursive(rhs_, sym_prev)
   } else if (length(direct_dot_pos) > 0 && direct_dot_pos[[1]] != 0) {
