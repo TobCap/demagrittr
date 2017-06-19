@@ -72,6 +72,7 @@ construct_lang_manipulation <- function(ifs_expr, env_ = parent.frame()) {
       as.call(lapply(expr_, iter_))
     }
   )
+
   add_else <- function(prev_, next_) {
     if (prev_[[1]] != "if") {
       stop("not `if` clause")
@@ -100,6 +101,7 @@ construct_lang_manipulation <- function(ifs_expr, env_ = parent.frame()) {
 
 replace_dot_recursive <- function(x, expr_new) {
   if (!incl_dot_sym(x)) {
+    # for short-cut porpose
     return(dig_ast(x))
   }
 
@@ -145,6 +147,7 @@ get_rhs_brace <- function(rhs_, sym_prev) {
 get_rhs_mod <- function(direct_dot_pos, rhs_, sym_prev) {
   if (length(rhs_) == 1 && !is.recursive(rhs_)) {
     # symbol or character is valid when parsing
+
     return(as.call(c(rhs_, sym_prev)))
   }
 
@@ -261,6 +264,7 @@ build_pipe_call <- function(lst, replace_sym, use_assign_sym = FALSE) {
       wrap_lazy(lst)
     }
   } else {
+    # as eager
     if (is_pipe_lambda(origin, first_op)) {
       make_lambda(lst)
     } else if (is.null(replace_sym)) {
