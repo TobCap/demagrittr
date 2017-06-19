@@ -145,9 +145,17 @@ get_rhs_paren <- function(rhs_, sym_prev) {
 }
 
 get_rhs_mod <- function(direct_dot_pos, rhs_, sym_prev) {
-  if (length(rhs_) == 1 && !is.recursive(rhs_)) {
-    # symbol or character is valid when parsing
+  ## The code below is commented out because demagrittr will not take the
+  ## resonsibility of executability of parsed code, i.e.,
+  ## demagrittr(1 %>% 1) returns `1(1)` of language object, not returns error.
+  # if (is.atomic(rhs_)) {
+  #   stop(sprintf(
+  #     "attemp to apply but rhs, `%s`, seems non-function",
+  #     as.character(rhs_)))
+  # }
 
+  if (is.symbol(rhs_)) {
+    # for the compatibility with magrittr,  `1 %>% base::sum` occurs error
     return(as.call(c(rhs_, sym_prev)))
   }
 
