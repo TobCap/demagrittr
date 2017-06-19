@@ -114,7 +114,7 @@ replace_dot_recursive <- function(x, expr_new) {
       as.call(c(quote(`~`), lapply(as.list(expr_[-1]), dig_ast)))
     } else if (is_magrittr_call(expr_)) {
       pipe_info <- get_pipe_info(expr_)
-      build_pipe_call(get_pipe_info(expr_), expr_new)
+      build_pipe_call(pipe_info, expr_new)
     }
   )
 
@@ -305,7 +305,10 @@ build_pipe_call <- function(lst, replace_sym, use_assign_sym = FALSE) {
   if (as_lazy) {
     if (is_pipe_lambda(origin, first_op)) {
       make_lambda_lazy(lst)
+    } else if (is.null(replace_sym)) {
+      wrap_lazy(lst)
     } else {
+      lst[[1]]$rhs <- replace_rhs_origin(origin, replace_sym)
       wrap_lazy(lst)
     }
   } else {
