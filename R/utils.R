@@ -113,6 +113,7 @@ replace_dot_recursive <- function(x, expr_new) {
     } else if (length(expr_) > 1 && expr_[[1]] == "~") {
       as.call(c(quote(`~`), lapply(as.list(expr_[-1]), dig_ast)))
     } else if (is_magrittr_call(expr_)) {
+      pipe_info <- get_pipe_info(expr_)
       build_pipe_call(get_pipe_info(expr_), expr_new)
     }
   )
@@ -221,7 +222,7 @@ wrap_lazy <- function(lst, reassign = FALSE) {
       } else if (rhs_elem1 == "{") {
         replace_dot_recursive(rhs_, acc)
       } else if (length(direct_dot_pos) > 0) {
-        rhs_mod <- (replace_direct_dot(rhs_, acc))
+        rhs_mod <- replace_direct_dot(rhs_, acc)
         replace_dot_recursive(rhs_mod, acc)
       } else if (length(direct_dot_pos) == 0) {
         rhs_mod <- as.call(c(rhs_elem1, acc, as.list(rhs_)[-1]))
