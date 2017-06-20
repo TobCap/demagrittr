@@ -7,10 +7,23 @@ pf_ <- NULL
 var_id <- 0L
 as_lazy <- FALSE
 
-is_magrittr_call <- function(x) length(x) == 3 &&
-  length(x[[1]]) == 1 && any(as.character(x[[1]]) == ops)
-incl_magrittr_ops <- function(x) any(all.names(x) %in% ops)
-incl_dot_sym <- function(x) any(all.names(x) %in% ".")
+is_magrittr_call <- function(x) {
+  length(x) == 3 && length(x[[1]]) == 1 && any(as.character(x[[1]]) == ops)
+}
+
+incl_magrittr_ops <- function(x) {
+  any(all.names(x) %in% ops)
+}
+
+incl_dot_sym <- function(x) {
+  any(all.names(x) %in% ".")
+}
+
+is_colon_ops_call <- function(expr) {
+  length(expr) == 3 && length(expr[[1]]) == 1 &&
+    as.character(expr[[1]]) %in% c("::", ":::")
+}
+
 
 init_ <- function(pf_, as_lazy) {
   pkg_env <- parent.env(environment()) # getNamespace("demagrittr")
@@ -190,7 +203,7 @@ make_last_lang <- function(acc_, first_sym, sym_prev_, reassign) {
   }
 }
 
-wrap_lazy <- function(lst, reassign = FALSE) {
+get_rhs_mod_lazy <- function(lst, reassign = FALSE) {
   # x %>% f; x %>% f(); x %>% f(.);
   # 1:10 %>% sum(100) => sum(1:10, 100)
   # 1:10 %>% sum(length(.)) => sum(1:10, length(1:10))
@@ -218,7 +231,7 @@ wrap_lazy <- function(lst, reassign = FALSE) {
         # (function(.) exp(.))(1)
         as.call(list(dig_ast(rhs_elem1), acc))
       } else if (rhs_elem1 == "(") {
-        as.call(list(dig_ast(rhs_), acc))
+        get_rhs_paren(rhs_, acc)
       } else if (rhs_elem1 == "{") {
         replace_dot_recursive(rhs_, acc)
       } else if (length(direct_dot_pos) > 0) {
@@ -228,13 +241,18 @@ wrap_lazy <- function(lst, reassign = FALSE) {
         rhs_mod <- as.call(c(rhs_elem1, acc, as.list(rhs_)[-1]))
         replace_dot_recursive(rhs_mod, acc)
       } else {
-        stop("missing pattern in wrap_lazy()")
+        stop("missing pattern in get_rhs_mod_lazy()")
       }
 
       iter(l[-1], body_)
 
   }
   iter(lst[-1], lst[[1]]$rhs)
+}
+
+wrap_lazy <- function(lst, reassign = FALSE, use_assign_sym = FALSE) {
+  first_sym <- lst[[1]]$rhs
+  get_rhs_mod_lazy(lst)
 }
 
 wrap <- function(lst, reassign = FALSE, use_assign_sym = FALSE) {
@@ -260,7 +278,7 @@ wrap <- function(lst, reassign = FALSE, use_assign_sym = FALSE) {
         , "%T>%" = get_rhs_mod(direct_dot_pos, rhs_, sym_prev)
         , "%$%" = call(assign_sym, sym_new,
                        call("with", sym_prev, dig_ast(
-                         reaplace_rhs_with_exit(rhs_,as.symbol("."),  sym_prev))))
+                         reaplace_rhs_with_exit(rhs_, as.symbol("."),  sym_prev))))
         , call(assign_sym, sym_new, get_rhs_mod(direct_dot_pos, rhs_, sym_prev))
       )
 
@@ -334,11 +352,6 @@ get_pipe_info <- function(x, acc = NULL) {
   }
 }
 
-is_colon_ops_call <- function(expr) {
-  length(expr) == 3 &&
-    length(expr[[1]]) == 1 &&
-    as.character(expr[[1]]) %in% c("::", ":::")
-}
 
 dig_ast <- construct_lang_manipulation(
   if (is_magrittr_call(expr_)) {
