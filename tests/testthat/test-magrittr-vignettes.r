@@ -39,13 +39,13 @@ test_that("equiv value", {
     1:10 %>% (substitute(f(), list(f = sum)))
   })
   expect_identical(eval(e4), eval(demagrittr(e4, FALSE)))
-  expect_error(eval(demagrittr(e4, FALSE, as_lazy = TRUE)))
+  expect_identical(eval(e4), eval(demagrittr(e4, FALSE, as_lazy = TRUE)))
 
   e41 <- quote({
     1:5 %>% (call("sum", 100))
   })
   expect_identical(eval(e41), eval(demagrittr(e41, FALSE)))
-  expect_error(eval(demagrittr(e41, FALSE, as_lazy = TRUE)))
+  expect_identical(eval(e41), eval(demagrittr(e41, FALSE, as_lazy = TRUE)))
 
   e5 <- quote({
     set.seed(1)

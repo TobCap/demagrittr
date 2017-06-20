@@ -146,16 +146,36 @@ replace_direct_dot <- function(x, expr_new) {
 }
 
 get_rhs_paren <- function(rhs_, sym_prev) {
-  # magrittr can evaluate below language syntax, but it should have to be error.
+  # magrittr can evaluate below language syntax
   # language: `1:10 %>% (substitute(f(), list(f = sum)))`
-  # closure: `1 %>% (function(x) x + 1))'
-  #          '1 %>% (2 %>% (function(x) function(y) x + y))`
+  # As vignette says in https://cran.r-project.org/web/packages/magrittr/vignettes/magrittr.html
+  # `Whenever you want to use a function- or call-generating statement as
+  # right-hand side, parentheses are used to evaluate the right-hand side
+  # before piping takes place.`.
+
+  # closure:
+  # `1 %>% (function(x) x + 1))' runs
+  # '1 %>% (2 %>% (function(x) function(y) x + y))` occurs error
+  # '1 %>% (2 %>% (function(x) {force(x); function(y) x + y}))` runs
 
   rhs_mod <- eval(rhs_, pf_)
-
+  # browser()
   switch(
     typeof(rhs_mod)
-    , "language" = build_pipe_call(get_pipe_info(call("%>%", sym_prev, rhs_mod)), NULL)
+    , "language" = {
+        if (class(rhs_mod[[1]]) == "function") {
+          # N.B. These are different. The first case is handled in this clause.
+          # 1:10 %>% (substitute(f(), list(f = sum)) -> as.call(list(sum, 1))
+          # 1:10 %>% (substitute(f(), list(f = quote(sum))) -> as.call(list(quote(sum), 1))
+          if (is.primitive(rhs_mod[[1]])) {
+            rhs_mod[[1]] <- as.symbol(methods:::.primname(rhs_mod[[1]]))
+          } else {
+            # FIX-ME: is there another way?
+            rhs_mod[[1]] <- parse(text = deparse(rhs_mod[[1]], width.cutoff = 500L))[[1]]
+          }
+        }
+        build_pipe_call(get_pipe_info(call("%>%", sym_prev, rhs_mod)), NULL)
+      }
     , as.call(c(dig_ast(rhs_), sym_prev))
   )
 }
