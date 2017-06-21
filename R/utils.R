@@ -271,7 +271,13 @@ get_rhs_mod_lazy <- function(lst, reassign = FALSE) {
 
 wrap_lazy <- function(lst, reassign = FALSE, use_assign_sym = FALSE) {
   first_sym <- lst[[1]]$rhs
-  get_rhs_mod_lazy(lst)
+  if (reassign) {
+    body_ <- get_rhs_mod_lazy(lst)
+    call("<-",first_sym, body_)
+  } else {
+    get_rhs_mod_lazy(lst)
+  }
+
 }
 
 wrap <- function(lst, reassign = FALSE, use_assign_sym = FALSE) {
