@@ -47,6 +47,8 @@ test_that("equiv value", {
   expect_identical(eval(e41), eval(demagrittr(e41, FALSE)))
   expect_identical(eval(e41), eval(demagrittr(e41, FALSE, as_lazy = TRUE)))
 
+  ### tests for addtional pipe are written in `test-other-ops.r`
+
   e5 <- quote({
     set.seed(1)
     rnorm(1000)      %>%

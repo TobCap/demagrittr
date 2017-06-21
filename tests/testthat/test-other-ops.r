@@ -26,4 +26,48 @@ test_that("equiv value8", {
   expect_identical(eval(e2), eval(demagrittr(e2, FALSE)))
   expect_identical(eval(e2), eval(demagrittr(e2, FALSE, as_lazy = TRUE)))
 
+  # compounded pipe %<>%
+  e3 <- quote(local({
+    iris$Sepal.Length %<>% sqrt
+    iris
+  }))
+  expect_identical(eval(e3), eval(demagrittr(e3, FALSE)))
+  expect_identical(eval(e3), eval(demagrittr(e3, FALSE, as_lazy = TRUE)))
+
+  e4 <- quote(local({
+    x <- 1:10
+    x[1:5] %<>% sqrt
+    x
+  }))
+  expect_identical(eval(e4), eval(demagrittr(e4, FALSE)))
+  expect_identical(eval(e4), eval(demagrittr(e4, FALSE, as_lazy = TRUE)))
+
+  ## magrittr's vignette
+  # tee pipe %T>%
+  e5 <- quote({
+    set.seed(1)
+    rnorm(200) %>%
+      matrix(ncol = 2) %T>%
+      plot %>% # plot usually does not return anything.
+      colSums
+  })
+  expect_identical(eval(e5), eval(demagrittr(e5, FALSE)))
+  expect_identical(eval(e5), eval(demagrittr(e5, FALSE, as_lazy = TRUE)))
+
+  # dollar pipe %$%
+  e6 <- quote(
+    iris %>%
+      subset(Sepal.Length > mean(Sepal.Length)) %$%
+      cor(Sepal.Length, Sepal.Width)
+  )
+  expect_identical(eval(e6), eval(demagrittr(e6, FALSE)))
+  expect_identical(eval(e6), eval(demagrittr(e6, FALSE, as_lazy = TRUE)))
+
+  e7 <- quote(
+    data.frame(z = rnorm(100)) %$%
+      ts.plot(z)
+  )
+  expect_identical(eval(e7), eval(demagrittr(e7, FALSE)))
+  expect_identical(eval(e7), eval(demagrittr(e7, FALSE, as_lazy = TRUE)))
+
 })
