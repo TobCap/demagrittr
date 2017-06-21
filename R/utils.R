@@ -29,7 +29,15 @@ is_pipe_lambda <- function(origin, first_op) {
 }
 
 is_compounded_pipe <- function(expr) {
-  length(expr) == 1 && as.character(expr) == "%<>%"
+  identical(expr, quote(`%<>%`))
+}
+
+is_tee_pipe <- function(expr) {
+  identical(expr, quote(`%T>%`))
+}
+
+is_dollar_pipe <- function(expr) {
+  identical(expr, quote(`%$%`))
 }
 
 init_ <- function(pf_, as_lazy) {
@@ -221,7 +229,7 @@ get_rhs_mod <- function(direct_dot_pos, rhs_, sym_prev) {
   }
 }
 
-get_rhs_mod_lazy <- function(lst, reassign = FALSE) {
+get_rhs_mod_lazy <- function(lst) {
   # x %>% f; x %>% f(); x %>% f(.);
   # 1:10 %>% sum(100) => sum(1:10, 100)
   # 1:10 %>% sum(length(.)) => sum(1:10, length(1:10))
@@ -231,17 +239,23 @@ get_rhs_mod_lazy <- function(lst, reassign = FALSE) {
 
   # browser()
   # NULL
-  iter <- function(l, acc = NULL) {
+  iter <- function(l, acc) {
     if (length(l) == 0) {
       return(acc)
     }
 
     rhs_ <- l[[1]]$rhs
+    op_ <- l[[1]]$op
     direct_dot_pos <- which(as.list(rhs_) == quote(.))
     rhs_elem1 <- if (is.recursive(rhs_)) rhs_[[1]] else NULL
 
     body_ <-
-      if (is.symbol(rhs_)) {
+      if (is_dollar_pipe(op_)) {
+        call("with", acc, replace_dot_recursive(rhs_, acc))
+      # } else if (is_tee_pipe(op_)) {
+      #   browser()
+      #   call("{", build_pipe_call(call("%>%", acc, rhs_), NULL), acc)
+      } else if (is.symbol(rhs_)) {
         as.call(list(rhs_, acc))
       } else if (length(rhs_) == 1 & is.call(rhs_)) {
         ## rhs_elem1 should be passed recuresively
@@ -262,7 +276,21 @@ get_rhs_mod_lazy <- function(lst, reassign = FALSE) {
         stop("missing pattern in get_rhs_mod_lazy()")
       }
 
+    if (is_tee_pipe(op_)) {
+      call("{", build_pipe_call(call("%>%", acc, rhs_), NULL), iter(l[-1], acc))
+      # T_body <-  bquote({
+      #     .(prev_call)
+      #     .(next_call)
+      #   }, list(prev_call = build_pipe_call(call("%>%", quote(..), rhs_), NULL),
+      #           next_call = iter(l[-1], quote(..))
+      #           )
+      #   )
+      #
+      # as.call(c(call("(", call("function", as.pairlist(alist(..=)), T_body)), acc))
+
+    } else {
       iter(l[-1], body_)
+    }
 
   }
   iter(lst[-1], lst[[1]]$rhs)
@@ -282,7 +310,6 @@ wrap <- function(lst, use_assign_sym = FALSE) {
 
   iter2 <- function(l, sym_prev, acc = NULL) {
     if (length(l) == 0) {
-      #return(make_last_lang(acc, first_sym, sym_prev, reassign))
       return(c(acc, sym_prev))
     }
 

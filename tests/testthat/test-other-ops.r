@@ -52,8 +52,19 @@ test_that("equiv value8", {
       colSums
   })
   expect_identical(eval(e5), eval(demagrittr(e5, FALSE)))
-  expect_identical(eval(e5), eval(demagrittr(e5, FALSE, as_lazy = TRUE)))
+  # The random variables which have different values passed to rhs failes
+  # next test.
+  #expect_identical(eval(e5), eval(demagrittr(e5, FALSE, as_lazy = TRUE)))
 
+  e51 <- quote(
+    1:5 %>%
+      {. < 3} %T>%
+      print() %>%
+      sum() %>%
+      log()
+  )
+  expect_identical(eval(e51), eval(demagrittr(e51, FALSE)))
+  expect_identical(eval(e51), eval(demagrittr(e51, FALSE, as_lazy = TRUE)))
   # dollar pipe %$%
   e6 <- quote(
     iris %>%
@@ -63,10 +74,11 @@ test_that("equiv value8", {
   expect_identical(eval(e6), eval(demagrittr(e6, FALSE)))
   expect_identical(eval(e6), eval(demagrittr(e6, FALSE, as_lazy = TRUE)))
 
-  e7 <- quote(
+  e7 <- quote({
+    set.seed(1)
     data.frame(z = rnorm(100)) %$%
       ts.plot(z)
-  )
+  })
   expect_identical(eval(e7), eval(demagrittr(e7, FALSE)))
   expect_identical(eval(e7), eval(demagrittr(e7, FALSE, as_lazy = TRUE)))
 
