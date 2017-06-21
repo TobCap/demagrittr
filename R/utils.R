@@ -6,6 +6,7 @@
 pf_ <- NULL
 var_id <- 0L
 as_lazy <- FALSE
+utils::globalVariables(c("expr_", "iter_"))
 
 is_magrittr_call <- function(x) {
   length(x) == 3 && length(x[[1]]) == 1 && any(as.character(x[[1]]) == ops)
