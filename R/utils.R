@@ -28,6 +28,9 @@ is_pipe_lambda <- function(origin, first_op) {
   length(origin) == 1 && origin == "." && first_op == "%>%"
 }
 
+is_compounded_pipe <- function(expr) {
+  length(expr) == 1 && as.character(expr) == "%<>%"
+}
 
 init_ <- function(pf_, as_lazy) {
   pkg_env <- parent.env(environment()) # getNamespace("demagrittr")
@@ -218,14 +221,6 @@ get_rhs_mod <- function(direct_dot_pos, rhs_, sym_prev) {
   }
 }
 
-make_last_lang <- function(acc_, first_sym, sym_prev_, reassign) {
-  if (reassign) {
-    c(acc_, call("<-", first_sym, sym_prev_))
-  } else {
-    c(acc_, sym_prev_)
-  }
-}
-
 get_rhs_mod_lazy <- function(lst, reassign = FALSE) {
   # x %>% f; x %>% f(); x %>% f(.);
   # 1:10 %>% sum(100) => sum(1:10, 100)
@@ -274,13 +269,8 @@ get_rhs_mod_lazy <- function(lst, reassign = FALSE) {
 }
 
 wrap_lazy <- function(lst, reassign = FALSE, use_assign_sym = FALSE) {
-  first_sym <- lst[[1]]$rhs
-  if (reassign) {
-    body_ <- get_rhs_mod_lazy(lst)
-    call("<-",first_sym, body_)
-  } else {
-    get_rhs_mod_lazy(lst)
-  }
+
+  get_rhs_mod_lazy(lst)
 
 }
 
@@ -292,7 +282,8 @@ wrap <- function(lst, reassign = FALSE, use_assign_sym = FALSE) {
 
   iter2 <- function(l, sym_prev, acc = NULL) {
     if (length(l) == 0) {
-      return(make_last_lang(acc, first_sym, sym_prev, reassign))
+      #return(make_last_lang(acc, first_sym, sym_prev, reassign))
+      return(c(acc, sym_prev))
     }
 
     rhs_ <- l[[1]]$rhs
@@ -347,26 +338,33 @@ build_pipe_call <- function(expr, replace_sym, use_assign_sym = FALSE) {
   origin <- lst[[1]]$rhs
   first_op <- lst[[2]]$op
 
-  if (as_lazy) {
-    if (is_pipe_lambda(origin, first_op)) {
-      make_lambda_lazy(lst)
-    } else if (is.null(replace_sym)) {
-      wrap_lazy(lst, first_op == "%<>%")
+  body_ <-
+    if (as_lazy) {
+      if (is_pipe_lambda(origin, first_op)) {
+        make_lambda_lazy(lst)
+      } else if (is.null(replace_sym)) {
+        wrap_lazy(lst)
+      } else {
+        lst[[1]]$rhs <- replace_rhs_origin(origin, replace_sym)
+        wrap_lazy(lst)
+      }
     } else {
-      lst[[1]]$rhs <- replace_rhs_origin(origin, replace_sym)
-      wrap_lazy(lst, first_op == "%<>%")
+      # as eager
+      if (is_pipe_lambda(origin, first_op)) {
+        make_lambda(lst)
+      } else if (is.null(replace_sym)) {
+        wrap(lst, first_op == "%<>%", use_assign_sym)
+      } else {
+        # this is called x %>% {(. + 1) %>% f}
+        lst[[1]]$rhs <- replace_rhs_origin(origin, replace_sym)
+        wrap(lst, first_op == "%<>%", use_assign_sym)
+      }
     }
+
+  if (is_compounded_pipe(first_op)) {
+    call("<-", origin, body_)
   } else {
-    # as eager
-    if (is_pipe_lambda(origin, first_op)) {
-      make_lambda(lst)
-    } else if (is.null(replace_sym)) {
-      wrap(lst, first_op == "%<>%", use_assign_sym)
-    } else {
-      # this is called x %>% {(. + 1) %>% f}
-      lst[[1]]$rhs <- replace_rhs_origin(origin, replace_sym)
-      wrap(lst, first_op == "%<>%", use_assign_sym)
-    }
+    body_
   }
 }
 
