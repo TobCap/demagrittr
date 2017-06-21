@@ -24,6 +24,10 @@ is_colon_ops_call <- function(expr) {
     as.character(expr[[1]]) %in% c("::", ":::")
 }
 
+is_pipe_lambda <- function(origin, first_op) {
+  length(origin) == 1 && origin == "." && first_op == "%>%"
+}
+
 
 init_ <- function(pf_, as_lazy) {
   pkg_env <- parent.env(environment()) # getNamespace("demagrittr")
@@ -335,10 +339,6 @@ replace_rhs_origin <- function(rhs, replace_sym) {
     # maybe ok?
     methods::substituteDirect(rhs, list(. = replace_sym))
   }
-}
-
-is_pipe_lambda <- function(origin, first_op) {
-  length(origin) == 1 && origin == "." && first_op == "%>%"
 }
 
 build_pipe_call <- function(expr, replace_sym, use_assign_sym = FALSE) {
