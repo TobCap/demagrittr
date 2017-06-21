@@ -126,8 +126,7 @@ replace_dot_recursive <- function(x, expr_new) {
     } else if (length(expr_) > 1 && expr_[[1]] == "~") {
       as.call(c(quote(`~`), lapply(as.list(expr_[-1]), dig_ast)))
     } else if (is_magrittr_call(expr_)) {
-      pipe_info <- get_pipe_info(expr_)
-      build_pipe_call(pipe_info, expr_new)
+      build_pipe_call(expr_, expr_new)
     }
   )
 
@@ -174,7 +173,7 @@ get_rhs_paren <- function(rhs_, sym_prev) {
             rhs_mod[[1]] <- parse(text = deparse(rhs_mod[[1]], width.cutoff = 500L))[[1]]
           }
         }
-        build_pipe_call(get_pipe_info(call("%>%", sym_prev, rhs_mod)), NULL)
+        build_pipe_call(call("%>%", sym_prev, rhs_mod), NULL)
       }
     , as.call(c(dig_ast(rhs_), sym_prev))
   )
@@ -324,7 +323,7 @@ reaplace_rhs_with_exit <- function(expr, from_sym, to_sym) {
 
 replace_rhs_origin <- function(rhs, replace_sym) {
   if (!incl_dot_sym(rhs)) {
-    # rhs is already applied by dig_ast() in get_pipe_info()
+    # rhs is already applied by dig_ast()
     return(rhs)
   } else {
     # maybe ok?
@@ -336,18 +335,20 @@ is_pipe_lambda <- function(origin, first_op) {
   length(origin) == 1 && origin == "." && first_op == "%>%"
 }
 
-build_pipe_call <- function(lst, replace_sym, use_assign_sym = FALSE) {
+build_pipe_call <- function(expr, replace_sym, use_assign_sym = FALSE) {
+  # `lst` should have more than one element
+  lst <- get_pipe_info(expr)
   origin <- lst[[1]]$rhs
-  first_op <- lst[[2]]$op # `lst` should have more than one element
+  first_op <- lst[[2]]$op
 
   if (as_lazy) {
     if (is_pipe_lambda(origin, first_op)) {
       make_lambda_lazy(lst)
     } else if (is.null(replace_sym)) {
-      wrap_lazy(lst)
+      wrap_lazy(lst, first_op == "%<>%")
     } else {
       lst[[1]]$rhs <- replace_rhs_origin(origin, replace_sym)
-      wrap_lazy(lst)
+      wrap_lazy(lst, first_op == "%<>%")
     }
   } else {
     # as eager
@@ -375,6 +376,6 @@ get_pipe_info <- function(x, acc = NULL) {
 
 dig_ast <- construct_lang_manipulation(
   if (is_magrittr_call(expr_)) {
-    build_pipe_call(get_pipe_info(expr_), NULL)
+    build_pipe_call(expr_, NULL)
   }
 )
