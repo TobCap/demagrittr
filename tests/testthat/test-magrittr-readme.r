@@ -28,6 +28,7 @@ test_that("equiv value", {
       colSums
   })
   expect_identical(eval(e2), eval(demagrittr(e2, FALSE)))
+  #expect_identical(eval(e2), eval(demagrittr(e2, FALSE, as_lazy = TRUE)))
 
   # Pipe with exposition of variables
   e3 <- quote({
