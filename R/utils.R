@@ -69,14 +69,14 @@ rm_tmp_symbols_if_exists <- function(env) {
 
 make_lambda <- function(body_) {
   arg_ <- as.vector(list(. = quote(expr=)), "pairlist")
-  call("function", arg_, wrap(body_, FALSE))
+  call("function", arg_, wrap(body_))
 }
 
 make_lambda_lazy <- function(body_) {
   # change format from `.` to `..` to prevent recursive transform of `.`
   arg_ <- as.vector(list(.. = quote(expr=)), "pairlist")
   body_[[1]]$rhs <- quote(..)
-  call("function", arg_, wrap_lazy(body_, FALSE))
+  call("function", arg_, wrap_lazy(body_))
 }
 
 construct_lang_manipulation <- function(ifs_expr, env_ = parent.frame()) {
@@ -268,13 +268,13 @@ get_rhs_mod_lazy <- function(lst, reassign = FALSE) {
   iter(lst[-1], lst[[1]]$rhs)
 }
 
-wrap_lazy <- function(lst, reassign = FALSE, use_assign_sym = FALSE) {
+wrap_lazy <- function(lst, use_assign_sym = FALSE) {
 
   get_rhs_mod_lazy(lst)
 
 }
 
-wrap <- function(lst, reassign = FALSE, use_assign_sym = FALSE) {
+wrap <- function(lst, use_assign_sym = FALSE) {
 
   sym <- make_varname(as_symbol = !use_assign_sym)
   first_sym <- lst[[1]]$rhs
@@ -353,11 +353,11 @@ build_pipe_call <- function(expr, replace_sym, use_assign_sym = FALSE) {
       if (is_pipe_lambda(origin, first_op)) {
         make_lambda(lst)
       } else if (is.null(replace_sym)) {
-        wrap(lst, first_op == "%<>%", use_assign_sym)
+        wrap(lst, use_assign_sym)
       } else {
         # this is called x %>% {(. + 1) %>% f}
         lst[[1]]$rhs <- replace_rhs_origin(origin, replace_sym)
-        wrap(lst, first_op == "%<>%", use_assign_sym)
+        wrap(lst, use_assign_sym)
       }
     }
 
