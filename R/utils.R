@@ -182,7 +182,7 @@ get_rhs_paren <- function(rhs_, sym_prev) {
           # 1:10 %>% (substitute(f(), list(f = sum)) -> as.call(list(sum, 1))
           # 1:10 %>% (substitute(f(), list(f = quote(sum))) -> as.call(list(quote(sum), 1))
           if (is.primitive(rhs_mod[[1]])) {
-            rhs_mod[[1]] <- as.symbol(methods:::.primname(rhs_mod[[1]]))
+            rhs_mod[[1]] <- as.symbol(asNamespace("methods")$.primname(rhs_mod[[1]]))
           } else {
             # FIX-ME: is there another way?
             rhs_mod[[1]] <- parse(text = deparse(rhs_mod[[1]], width.cutoff = 500L))[[1]]
