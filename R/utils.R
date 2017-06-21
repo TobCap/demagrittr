@@ -253,9 +253,6 @@ get_rhs_mod_lazy <- function(lst) {
     body_ <-
       if (is_dollar_pipe(op_)) {
         call("with", acc, replace_dot_recursive(rhs_, acc))
-      # } else if (is_tee_pipe(op_)) {
-      #   browser()
-      #   call("{", build_pipe_call(call("%>%", acc, rhs_), NULL), acc)
       } else if (is.symbol(rhs_)) {
         as.call(list(rhs_, acc))
       } else if (length(rhs_) == 1 & is.call(rhs_)) {
