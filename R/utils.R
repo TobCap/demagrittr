@@ -218,14 +218,12 @@ get_rhs_mod <- function(direct_dot_pos, rhs_, sym_prev) {
     get_rhs_paren(rhs_, sym_prev)
   } else if (rhs_elem1 == "{") {
     replace_dot_recursive(rhs_, sym_prev)
-  } else if (length(direct_dot_pos) > 0 && direct_dot_pos[[1]] != 0) {
-    # 0 means converted already
-    get_rhs_mod(0, replace_direct_dot(rhs_, sym_prev), sym_prev)
-  } else if (length(direct_dot_pos) == 0) {
-    get_rhs_mod(0, as.call(c(rhs_elem1, sym_prev, as.list(rhs_)[-1])), sym_prev)
-  } else if (direct_dot_pos == 0) {
-    # already direct-dot is converted
+  } else if (length(direct_dot_pos) > 0) {
+    rhs_mod <- replace_direct_dot(rhs_, sym_prev)
     replace_dot_recursive(rhs_, sym_prev)
+  } else if (length(direct_dot_pos) == 0) {
+    rhs_mod <- as.call(c(rhs_elem1, sym_prev, as.list(rhs_)[-1]))
+    replace_dot_recursive(rhs_mod, sym_prev)
   } else {
     stop("missing pattern in get_rhs_mod()")
   }
