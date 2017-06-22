@@ -205,14 +205,15 @@ get_rhs_mod <- function(direct_dot_pos, rhs_, sym_prev) {
   #     as.character(rhs_)))
   # }
 
-  if (is.symbol(rhs_)) {
-    # for the compatibility with magrittr,  `1 %>% base::sum` occurs error
-    return(as.call(c(rhs_, sym_prev)))
+  if (length(rhs_) == 0) {
+    stop(paste0("incorrect call from", rhs_))
   }
 
-  rhs_elem1 <- rhs_[[1]]
-  if (length(rhs_) == 1 && is.call(rhs_)) {
-    as.call(c(rhs_elem1, sym_prev))
+  rhs_elem1 <- if (is.recursive(rhs_)) rhs_[[1]] else NULL
+  if (is.symbol(rhs_)) {
+    as.call(c(rhs_, sym_prev))
+  } else if (length(rhs_) == 1 && is.call(rhs_)) {
+    as.call(c(dig_ast(rhs_elem1), sym_prev))
   } else if (rhs_elem1 == "(") {
     get_rhs_paren(rhs_, sym_prev)
   } else if (rhs_elem1 == "{") {

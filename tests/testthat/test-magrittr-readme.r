@@ -3,6 +3,21 @@ suppressMessages(library("magrittr"))
 
 test_that("equiv value", {
   # https://github.com/tidyverse/magrittr/blob/9c75666e70e97a51fa13a831c7a5ea43134123a8/README.md
+  test_demagrittr <- function(expr, eager = TRUE, lazy = TRUE) {
+    stopifnot(is.call(expr))
+    pipes <- c("%>%", "%T>%", "%$%", "%<>%")
+    eager_eval <- demagrittr(expr, FALSE, as_lazy = FALSE)
+    lazy_eval <- demagrittr(expr, FALSE, as_lazy = TRUE)
+    if (eager) {
+      expect_identical(eval(expr), eval(eager_eval))
+      expect_false(any(all.names(eager_eval) %in% pipes))
+    }
+    if (lazy) {
+      expect_identical(eval(expr), eval(lazy_eval))
+      expect_false(any(all.names(lazy_eval) %in% pipes))
+    }
+  }
+
 
   # More advanced right-hand sides and lambdas
   e1 <- quote({
@@ -16,8 +31,7 @@ test_that("equiv value", {
       } %>%
       summary
     })
-  expect_identical(eval(e1), eval(demagrittr(e1, FALSE)))
-  expect_identical(eval(e1), eval(demagrittr(e1, FALSE, as_lazy = TRUE)))
+  test_demagrittr(e1)
 
   # Tee operations
   e2 <- quote({
@@ -27,8 +41,7 @@ test_that("equiv value", {
       plot %>% # plot usually does not return anything.
       colSums
   })
-  expect_identical(eval(e2), eval(demagrittr(e2, FALSE)))
-  #expect_identical(eval(e2), eval(demagrittr(e2, FALSE, as_lazy = TRUE)))
+  test_demagrittr(e2, lazy = FALSE)
 
   # Pipe with exposition of variables
   e3 <- quote({
@@ -36,7 +49,8 @@ test_that("equiv value", {
       subset(Sepal.Length > mean(Sepal.Length)) %$%
       cor(Sepal.Length, Sepal.Width)
   })
-  expect_identical(eval(e3), eval(demagrittr(e3, FALSE)))
+  test_demagrittr(e3)
+
 
   # Compound assignment pipe operations
   e4 <- quote({
@@ -44,7 +58,7 @@ test_that("equiv value", {
     iris$Sepal.Length %<>% sqrt
     iris
   })
-  expect_identical(eval(e4), eval(demagrittr(e4, FALSE)))
+  test_demagrittr(e4)
 
 
 })
