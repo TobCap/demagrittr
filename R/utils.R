@@ -210,6 +210,7 @@ get_rhs_mod <- function(direct_dot_pos, rhs_, sym_prev) {
   }
 
   rhs_elem1 <- if (is.recursive(rhs_)) rhs_[[1]] else NULL
+
   if (is.symbol(rhs_)) {
     as.call(c(rhs_, sym_prev))
   } else if (length(rhs_) == 1 && is.call(rhs_)) {
@@ -321,8 +322,8 @@ wrap <- function(lst, use_assign_sym = FALSE) {
       switch(as.character(op_)
         , "%T>%" = get_rhs_mod(direct_dot_pos, rhs_, sym_prev)
         , "%$%" = call(assign_sym, sym_new,
-                       call("with", sym_prev, dig_ast(
-                         reaplace_rhs_with_exit(rhs_, as.symbol("."),  sym_prev))))
+                        call("with", sym_prev,
+                             replace_dot_recursive(rhs_, sym_prev)))
         , call(assign_sym, sym_new, get_rhs_mod(direct_dot_pos, rhs_, sym_prev))
       )
 
@@ -331,19 +332,6 @@ wrap <- function(lst, use_assign_sym = FALSE) {
 
   first_assign <- call(assign_sym, sym, first_sym)
   as.call(c(quote(`{`), iter2(lst[-1], as.symbol(sym), acc = first_assign)))
-}
-
-reaplace_rhs_with_exit <- function(expr, from_sym, to_sym) {
-  do_func <- construct_lang_manipulation(
-    if (is_magrittr_call(expr_)) {
-      as.call(list(expr_[[1]], iter_(expr_[[2]]), expr_[[3]]))
-    } else if (length(expr_) == 1 &&
-               is.symbol(expr_) &&
-               identical(expr_, from_sym)) {
-      to_sym
-    }
-  )
-  do_func(expr)
 }
 
 replace_rhs_origin <- function(rhs, replace_sym) {
