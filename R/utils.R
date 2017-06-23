@@ -53,7 +53,7 @@ init_ <- function(pf_, as_lazy) {
 }
 
 
-make_varname <- function(prefix = varname_prefix, as_symbol = TRUE) {
+make_varname <- function(prefix = varname_prefix) {
   if (any(strsplit(prefix, "")[[1]] %in% regexp_meta)) {
     stop("cannot use regexp_meta_char in `prefix` of make_varname()")
   }
@@ -62,11 +62,9 @@ make_varname <- function(prefix = varname_prefix, as_symbol = TRUE) {
   var_id <<- var_id + 1L
 
   if (exists(new_name, envir = pf_)) {
-    Recall(prefix = prefix, as_symbol = as_symbol)
-  } else if (as_symbol) {
-    as.symbol(new_name)
+    Recall(prefix = prefix)
   } else {
-    new_name # character
+    as.symbol(new_name)
   }
 }
 
@@ -294,17 +292,16 @@ get_rhs_mod_lazy <- function(lst) {
   iter(lst[-1], lst[[1]]$rhs)
 }
 
-wrap_lazy <- function(lst, use_assign_sym = FALSE) {
+wrap_lazy <- function(lst) {
 
   get_rhs_mod_lazy(lst)
 
 }
 
-wrap <- function(lst, use_assign_sym = FALSE) {
+wrap <- function(lst) {
 
-  sym <- make_varname(as_symbol = !use_assign_sym)
+  sym <- make_varname()
   first_sym <- lst[[1]]$rhs
-  assign_sym <- if (use_assign_sym) "assign" else "<-"
 
   iter2 <- function(l, sym_prev, acc = NULL) {
     if (length(l) == 0) {
@@ -316,21 +313,21 @@ wrap <- function(lst, use_assign_sym = FALSE) {
 
     # need to check whether rhs_[[1]] is not "{"
     direct_dot_pos <- which(as.list(rhs_) == quote(.))
-    sym_new <- make_varname(as_symbol = !use_assign_sym)
+    sym_new <- make_varname()
 
     lang <-
       switch(as.character(op_)
         , "%T>%" = get_rhs_mod(direct_dot_pos, rhs_, sym_prev)
-        , "%$%" = call(assign_sym, sym_new,
+        , "%$%" = call("<-", sym_new,
                         call("with", sym_prev,
                              replace_dot_recursive(rhs_, sym_prev)))
-        , call(assign_sym, sym_new, get_rhs_mod(direct_dot_pos, rhs_, sym_prev))
+        , call("<-", sym_new, get_rhs_mod(direct_dot_pos, rhs_, sym_prev))
       )
 
     iter2(l[-1], as.symbol(`if`(op_ == "%T>%", sym_prev, sym_new)), c(acc, lang))
   }
 
-  first_assign <- call(assign_sym, sym, first_sym)
+  first_assign <- call("<-", sym, first_sym)
   as.call(c(quote(`{`), iter2(lst[-1], as.symbol(sym), acc = first_assign)))
 }
 
@@ -365,11 +362,11 @@ build_pipe_call <- function(expr, replace_sym, use_assign_sym = FALSE) {
       if (is_pipe_lambda(origin, first_op)) {
         make_lambda(lst)
       } else if (is.null(replace_sym)) {
-        wrap(lst, use_assign_sym)
+        wrap(lst)
       } else {
         # this is called x %>% {(. + 1) %>% f}
         lst[[1]]$rhs <- replace_rhs_origin(origin, replace_sym)
-        wrap(lst, use_assign_sym)
+        wrap(lst)
       }
     }
 
