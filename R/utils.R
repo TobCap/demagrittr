@@ -324,7 +324,11 @@ wrap <- function(lst) {
         , call("<-", sym_new, get_rhs_mod(direct_dot_pos, rhs_, sym_prev))
       )
 
-    iter2(l[-1], as.symbol(`if`(op_ == "%T>%", sym_prev, sym_new)), c(acc, lang))
+    if (is_tee_pipe(op_)) {
+      iter2(l[-1], sym_prev, c(acc, lang))
+    } else {
+      iter2(l[-1], sym_new, c(acc, lang))
+    }
   }
 
   first_assign <- call("<-", sym, first_sym)
