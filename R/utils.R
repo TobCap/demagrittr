@@ -228,16 +228,9 @@ get_rhs_mod <- function(direct_dot_pos, rhs_, sym_prev) {
   }
 }
 
-get_rhs_mod_lazy <- function(lst) {
-  # x %>% f; x %>% f(); x %>% f(.);
-  # 1:10 %>% sum(100) => sum(1:10, 100)
-  # 1:10 %>% sum(length(.)) => sum(1:10, length(1:10))
-  # 1:10 %>% sum(length(.), .) => sum(length(1:10), 1:10)
-  # 1:10 %>% {. + 1} => {1:10 + 1}
-  # 1:10 %>% (function(x) x + 1) %>% (function(x) x + 1)(1:10)
 
-  # browser()
-  # NULL
+wrap_lazy <- function(lst) {
+
   iter <- function(l, acc) {
     if (length(l) == 0) {
       return(acc)
@@ -290,18 +283,10 @@ get_rhs_mod_lazy <- function(lst) {
 
   }
   iter(lst[-1], lst[[1]]$rhs)
-}
-
-wrap_lazy <- function(lst) {
-
-  get_rhs_mod_lazy(lst)
 
 }
 
 wrap <- function(lst) {
-
-  sym <- make_varname()
-  first_sym <- lst[[1]]$rhs
 
   iter2 <- function(l, sym_prev, acc = NULL) {
     if (length(l) == 0) {
@@ -331,8 +316,9 @@ wrap <- function(lst) {
     }
   }
 
-  first_assign <- call("<-", sym, first_sym)
-  as.call(c(quote(`{`), iter2(lst[-1], as.symbol(sym), acc = first_assign)))
+  first_sym <- make_varname()
+  first_assign <- call("<-", first_sym, lst[[1]]$rhs)
+  as.call(c(quote(`{`), iter2(lst[-1], first_sym, acc = first_assign)))
 }
 
 replace_rhs_origin <- function(rhs, replace_sym) {
