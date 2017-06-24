@@ -12,11 +12,11 @@ is_magrittr_call <- function(x) {
   length(x) == 3 && length(x[[1]]) == 1 && any(as.character(x[[1]]) == ops)
 }
 
-incl_magrittr_ops <- function(x) {
+has_magrittr_ops <- function(x) {
   any(all.names(x) %in% ops)
 }
 
-incl_dot_sym <- function(x) {
+has_dot_sim <- function(x) {
   any(all.names(x) %in% ".")
 }
 
@@ -29,7 +29,7 @@ is_pipe_lambda <- function(origin, first_op) {
   length(origin) == 1 && origin == "." && first_op == "%>%"
 }
 
-is_compounded_pipe <- function(expr) {
+is_compound_pipe <- function(expr) {
   identical(expr, quote(`%<>%`))
 }
 
@@ -129,7 +129,7 @@ construct_lang_manipulation <- function(ifs_expr, env_ = parent.frame()) {
 }
 
 replace_dot_recursive <- function(x, expr_new) {
-  if (!incl_dot_sym(x)) {
+  if (!has_dot_sim(x)) {
     # for short-cut porpose
     return(dig_ast(x))
   }
@@ -332,7 +332,7 @@ wrap <- function(lst) {
 }
 
 replace_rhs_origin <- function(rhs, replace_sym) {
-  if (!incl_dot_sym(rhs)) {
+  if (!has_dot_sim(rhs)) {
     # rhs is already applied by dig_ast()
     return(rhs)
   } else {
@@ -370,7 +370,7 @@ build_pipe_call <- function(expr, replace_sym, use_assign_sym = FALSE) {
       }
     }
 
-  if (is_compounded_pipe(first_op)) {
+  if (is_compound_pipe(first_op)) {
     call("<-", origin, body_)
   } else {
     body_
@@ -378,7 +378,8 @@ build_pipe_call <- function(expr, replace_sym, use_assign_sym = FALSE) {
 }
 
 get_pipe_info <- function(x, acc = NULL) {
-  # the most left-side of pipe-stream is needed to be recursively parsed by dig_ast()
+  # the most left-side of pipe-stream is needed to be recursively
+  # parsed by dig_ast()
   if (!is_magrittr_call(x)) {
     c(list(list(op = NULL, rhs = dig_ast(x))), acc)
   } else {
