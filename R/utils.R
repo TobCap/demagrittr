@@ -193,42 +193,6 @@ get_rhs_paren <- function(rhs_, sym_prev) {
   )
 }
 
-get_rhs_mod <- function(direct_dot_pos, rhs_, sym_prev) {
-  ## The code below is commented out because demagrittr will not take the
-  ## resonsibility of executability of parsed code, i.e.,
-  ## demagrittr(1 %>% 1) returns `1(1)` of language object, not returns error.
-  # if (is.atomic(rhs_)) {
-  #   stop(sprintf(
-  #     "attemp to apply but rhs, `%s`, seems non-function",
-  #     as.character(rhs_)))
-  # }
-
-  if (length(rhs_) == 0) {
-    stop(paste0("incorrect call from", rhs_))
-  }
-
-  rhs_elem1 <- if (is.recursive(rhs_)) rhs_[[1]] else NULL
-
-  if (is.symbol(rhs_)) {
-    as.call(c(rhs_, sym_prev))
-  } else if (length(rhs_) == 1 && is.call(rhs_)) {
-    as.call(c(dig_ast(rhs_elem1), sym_prev))
-  } else if (rhs_elem1 == "(") {
-    get_rhs_paren(rhs_, sym_prev)
-  } else if (rhs_elem1 == "{") {
-    replace_dot_recursive(rhs_, sym_prev)
-  } else if (length(direct_dot_pos) > 0) {
-    rhs_mod <- replace_direct_dot(rhs_, sym_prev)
-    replace_dot_recursive(rhs_, sym_prev)
-  } else if (length(direct_dot_pos) == 0) {
-    rhs_mod <- as.call(c(rhs_elem1, sym_prev, as.list(rhs_)[-1]))
-    replace_dot_recursive(rhs_mod, sym_prev)
-  } else {
-    stop("missing pattern in get_rhs_mod()")
-  }
-}
-
-
 wrap_lazy <- function(lst) {
 
   iter <- function(l, acc) {
@@ -295,24 +259,35 @@ wrap <- function(lst) {
 
     rhs_ <- l[[1]]$rhs
     op_ <- l[[1]]$op
-
-    # need to check whether rhs_[[1]] is not "{"
     direct_dot_pos <- which(as.list(rhs_) == quote(.))
-    sym_new <- make_varname()
+    rhs_elem1 <- if (is.recursive(rhs_)) rhs_[[1]] else NULL
 
-    lang <-
-      switch(as.character(op_)
-        , "%T>%" = get_rhs_mod(direct_dot_pos, rhs_, sym_prev)
-        , "%$%" = call("<-", sym_new,
-                        call("with", sym_prev,
-                             replace_dot_recursive(rhs_, sym_prev)))
-        , call("<-", sym_new, get_rhs_mod(direct_dot_pos, rhs_, sym_prev))
-      )
+    body_ <-
+      if (is_dollar_pipe(op_)) {
+        call("with", sym_prev, replace_dot_recursive(rhs_, sym_prev))
+      } else if (is.symbol(rhs_)) {
+        as.call(c(rhs_, sym_prev))
+      } else if (length(rhs_) == 1 && is.call(rhs_)) {
+        as.call(c(dig_ast(rhs_elem1), sym_prev))
+      } else if (rhs_elem1 == "(") {
+        get_rhs_paren(rhs_, sym_prev)
+      } else if (rhs_elem1 == "{") {
+        replace_dot_recursive(rhs_, sym_prev)
+      } else if (length(direct_dot_pos) > 0) {
+        rhs_mod <- replace_direct_dot(rhs_, sym_prev)
+        replace_dot_recursive(rhs_, sym_prev)
+      } else if (length(direct_dot_pos) == 0) {
+        rhs_mod <- as.call(c(rhs_elem1, sym_prev, as.list(rhs_)[-1]))
+        replace_dot_recursive(rhs_mod, sym_prev)
+      } else {
+        stop("missing pattern in iter2()")
+      }
 
     if (is_tee_pipe(op_)) {
-      iter2(l[-1], sym_prev, c(acc, lang))
+      iter2(l[-1], sym_prev, c(acc, body_))
     } else {
-      iter2(l[-1], sym_new, c(acc, lang))
+      sym_new <- make_varname()
+      iter2(l[-1], sym_new, c(acc, call("<-", sym_new, body_)))
     }
   }
 
