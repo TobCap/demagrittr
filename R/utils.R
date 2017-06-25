@@ -41,6 +41,18 @@ is_dollar_pipe <- function(expr) {
   identical(expr, quote(`%$%`))
 }
 
+is_braket_call <- function(expr) {
+  is.call(expr) && identical(expr[[1]], quote(`{`))
+}
+
+is_paren_call <- function(expr) {
+  is.call(expr) && identical(expr[[1]], quote(`(`))
+}
+
+has_direct_dot <- function(expr) {
+  is.call(expr) && any(vapply(expr, identical, FALSE, quote(.)))
+}
+
 init_ <- function(pf_, as_lazy) {
   pkg_env <- parent.env(environment()) # getNamespace("demagrittr")
 
@@ -215,15 +227,15 @@ wrap_lazy <- function(lst) {
         # > demagrittr(1 %>% (. %>% exp)(), as_lazy = TRUE)
         # (function(.) exp(.))(1)
         as.call(list(dig_ast(rhs_elem1), acc))
-      } else if (rhs_elem1 == "(") {
+      } else if (is_paren_call(rhs_)) {
         get_rhs_paren(rhs_, acc)
-      } else if (rhs_elem1 == "{") {
+      } else if (is_braket_call(rhs_)) {
         replace_dot_recursive(rhs_, acc)
-      } else if (length(direct_dot_pos) > 0) {
+      } else if (has_direct_dot(rhs_)) {
         rhs_mod <- replace_direct_dot(rhs_, acc)
         replace_dot_recursive(rhs_mod, acc)
-      } else if (length(direct_dot_pos) == 0) {
-        rhs_mod <- as.call(c(rhs_elem1, acc, as.list(rhs_)[-1]))
+      } else if (!has_direct_dot(rhs_)) {
+        rhs_mod <- add_first_dot_to_rhs(rhs_, acc)
         replace_dot_recursive(rhs_mod, acc)
       } else {
         stop("missing pattern in get_rhs_mod_lazy()")
@@ -269,15 +281,15 @@ wrap <- function(lst) {
         as.call(c(rhs_, sym_prev))
       } else if (length(rhs_) == 1 && is.call(rhs_)) {
         as.call(c(dig_ast(rhs_elem1), sym_prev))
-      } else if (rhs_elem1 == "(") {
+      } else if (is_paren_call(rhs_)) {
         get_rhs_paren(rhs_, sym_prev)
-      } else if (rhs_elem1 == "{") {
+      } else if (is_braket_call(rhs_)) {
         replace_dot_recursive(rhs_, sym_prev)
-      } else if (length(direct_dot_pos) > 0) {
+      } else if (has_direct_dot(rhs_)) {
         rhs_mod <- replace_direct_dot(rhs_, sym_prev)
         replace_dot_recursive(rhs_, sym_prev)
-      } else if (length(direct_dot_pos) == 0) {
-        rhs_mod <- as.call(c(rhs_elem1, sym_prev, as.list(rhs_)[-1]))
+      } else if (!has_direct_dot(rhs_)) {
+        rhs_mod <- add_first_dot_to_rhs(rhs_, sym_prev)
         replace_dot_recursive(rhs_mod, sym_prev)
       } else {
         stop("missing pattern in iter2()")
@@ -304,6 +316,10 @@ replace_rhs_origin <- function(rhs, replace_sym) {
     # maybe ok?
     methods::substituteDirect(rhs, list(. = replace_sym))
   }
+}
+
+add_first_dot_to_rhs <- function(rhs, new_call) {
+  as.call(c(rhs[[1]], new_call, as.list(rhs)[-1]))
 }
 
 build_pipe_call <- function(expr, replace_sym, use_assign_sym = FALSE) {
