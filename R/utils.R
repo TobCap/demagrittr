@@ -205,6 +205,8 @@ get_rhs_paren <- function(rhs_, sym_prev) {
   )
 }
 
+
+
 wrap_lazy <- function(lst) {
 
   iter <- function(l, acc) {
@@ -214,19 +216,12 @@ wrap_lazy <- function(lst) {
 
     rhs_ <- l[[1]]$rhs
     op_ <- l[[1]]$op
-    direct_dot_pos <- which(as.list(rhs_) == quote(.))
-    rhs_elem1 <- if (is.recursive(rhs_)) rhs_[[1]] else NULL
 
     body_ <-
       if (is_dollar_pipe(op_)) {
         call("with", acc, replace_dot_recursive(rhs_, acc))
       } else if (is.symbol(rhs_)) {
         as.call(list(rhs_, acc))
-      } else if (length(rhs_) == 1 & is.call(rhs_)) {
-        ## rhs_elem1 should be passed recuresively
-        # > demagrittr(1 %>% (. %>% exp)(), as_lazy = TRUE)
-        # (function(.) exp(.))(1)
-        as.call(list(dig_ast(rhs_elem1), acc))
       } else if (is_paren_call(rhs_)) {
         get_rhs_paren(rhs_, acc)
       } else if (is_braket_call(rhs_)) {
@@ -271,16 +266,12 @@ wrap <- function(lst) {
 
     rhs_ <- l[[1]]$rhs
     op_ <- l[[1]]$op
-    direct_dot_pos <- which(as.list(rhs_) == quote(.))
-    rhs_elem1 <- if (is.recursive(rhs_)) rhs_[[1]] else NULL
 
     body_ <-
       if (is_dollar_pipe(op_)) {
         call("with", sym_prev, replace_dot_recursive(rhs_, sym_prev))
       } else if (is.symbol(rhs_)) {
         as.call(c(rhs_, sym_prev))
-      } else if (length(rhs_) == 1 && is.call(rhs_)) {
-        as.call(c(dig_ast(rhs_elem1), sym_prev))
       } else if (is_paren_call(rhs_)) {
         get_rhs_paren(rhs_, sym_prev)
       } else if (is_braket_call(rhs_)) {
@@ -319,7 +310,10 @@ replace_rhs_origin <- function(rhs, replace_sym) {
 }
 
 add_first_dot_to_rhs <- function(rhs, new_call) {
-  as.call(c(rhs[[1]], new_call, as.list(rhs)[-1]))
+  ## rhs[[1]] should be passed recuresively
+  # > demagrittr(1 %>% (. %>% exp)(), as_lazy = TRUE)
+  # (function(.) exp(.))(1)
+  as.call(c(dig_ast(rhs[[1]]), new_call, as.list(rhs)[-1]))
 }
 
 build_pipe_call <- function(expr, replace_sym, use_assign_sym = FALSE) {

@@ -51,4 +51,6 @@ test_that("nested rhs", {
   e9 <- quote(filter(iris, Sepal.Width %>% `>`(4.3)))
   test_demagrittr(e2)
 
+  e10 <- quote(1.2345 %>% (. %>% round(2)))
+  test_demagrittr(e10)
 })
