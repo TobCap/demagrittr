@@ -49,8 +49,16 @@ is_paren_call <- function(expr) {
   is.call(expr) && identical(expr[[1]], quote(`(`))
 }
 
-has_direct_dot <- function(expr) {
-  is.call(expr) && any(vapply(expr, identical, FALSE, quote(.)))
+is_tilda_call <- function(expr) {
+  is.call(expr) && identical(expr[[1]], quote(`~`))
+}
+
+is_dot_sym <- function(expr) {
+  identical(expr, quote(.))
+}
+
+has_direct_dot_arg <- function(expr) {
+  is.call(expr) && any(vapply(as.list(expr)[-1], identical, FALSE, quote(.)))
 }
 
 init_ <- function(pf_, as_lazy) {
@@ -93,6 +101,7 @@ make_lambda <- function(body_) {
 
 make_lambda_lazy <- function(body_) {
   # change format from `.` to `..` to prevent recursive transform of `.`
+  # arg_ <- as.vector(list(. = quote(expr=)), "pairlist")
   arg_ <- as.vector(list(.. = quote(expr=)), "pairlist")
   body_[[1]]$rhs <- quote(..)
   call("function", arg_, wrap_lazy(body_))
@@ -147,9 +156,9 @@ replace_dot_recursive <- function(x, expr_new) {
   }
 
   do_func <- construct_lang_manipulation(
-    if (is.symbol(expr_) && expr_ == ".") {
+    if (is_dot_sym(expr_)) {
       expr_new
-    } else if (length(expr_) > 1 && expr_[[1]] == "~") {
+    } else if (is_tilda_call(expr_)) {
       as.call(c(quote(`~`), lapply(as.list(expr_[-1]), dig_ast)))
     } else if (is_magrittr_call(expr_)) {
       build_pipe_call(expr_, expr_new)
@@ -162,11 +171,7 @@ replace_dot_recursive <- function(x, expr_new) {
 
 replace_direct_dot <- function(x, expr_new) {
   as.call(lapply(x, function(y) {
-    if (is.symbol(y) && y == ".") {
-      expr_new
-    } else {
-      y
-    }
+    if (is_dot_sym(y)) expr_new else y
   }))
 }
 
@@ -180,7 +185,7 @@ get_rhs_paren <- function(rhs_, sym_prev) {
 
   # closure:
   # `1 %>% (function(x) x + 1))' runs
-  # '1 %>% (2 %>% (function(x) function(y) x + y))` occurs error
+  # '1 %>% (2 %>% (function(x) function(y) x + y))` occurs error in CRAN ver 1.5
   # '1 %>% (2 %>% (function(x) {force(x); function(y) x + y}))` runs
 
   rhs_mod <- eval(rhs_, pf_)
@@ -249,10 +254,10 @@ transform_rhs <- function(rhs_, lang_prev, op_) {
     get_rhs_paren(rhs_, lang_prev)
   } else if (is_braket_call(rhs_)) {
     replace_dot_recursive(rhs_, lang_prev)
-  } else if (has_direct_dot(rhs_)) {
+  } else if (has_direct_dot_arg(rhs_)) {
     rhs_mod <- replace_direct_dot(rhs_, lang_prev)
     replace_dot_recursive(rhs_, lang_prev)
-  } else if (!has_direct_dot(rhs_)) {
+  } else if (!has_direct_dot_arg(rhs_)) {
     rhs_mod <- add_first_dot_to_rhs(rhs_, lang_prev)
     replace_dot_recursive(rhs_mod, lang_prev)
   } else {
