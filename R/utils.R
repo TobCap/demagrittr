@@ -42,7 +42,7 @@ rm_tmp_symbols_if_exists <- function(env) {
 
 make_lambda <- function(body_) {
   arg_ <- as.vector(list(. = quote(expr=)), "pairlist")
-  call("function", arg_, wrap(body_))
+  call("function", arg_, wrap_eager(body_))
 }
 
 make_lambda_lazy <- function(body_) {
@@ -156,41 +156,6 @@ get_rhs_paren <- function(rhs_, sym_prev) {
   )
 }
 
-
-
-wrap_lazy <- function(lst) {
-
-  iter <- function(l, acc) {
-    if (length(l) == 0) {
-      return(acc)
-    }
-
-    rhs_ <- l[[1]]$rhs
-    op_ <- l[[1]]$op
-
-    body_ <- transform_rhs(rhs_, acc, op_)
-
-    if (is_tee_pipe(op_)) {
-      call("{", build_pipe_call(call("%>%", acc, rhs_), NULL), iter(l[-1], acc))
-      # T_body <-  bquote({
-      #     .(prev_call)
-      #     .(next_call)
-      #   }, list(prev_call = build_pipe_call(call("%>%", quote(..), rhs_), NULL),
-      #           next_call = iter(l[-1], quote(..))
-      #           )
-      #   )
-      #
-      # as.call(c(call("(", call("function", as.pairlist(alist(..=)), T_body)), acc))
-
-    } else {
-      iter(l[-1], body_)
-    }
-
-  }
-  iter(lst[-1], lst[[1]]$rhs)
-
-}
-
 transform_rhs <- function(rhs_, lang_prev, op_) {
   if (is_dollar_pipe(op_)) {
     call("with", lang_prev, replace_dot_recursive(rhs_, lang_prev))
@@ -209,10 +174,65 @@ transform_rhs <- function(rhs_, lang_prev, op_) {
   } else {
     stop("missing pattern in transform_rhs()")
   }
+}
+
+
+wrap_lazy <- function(lst) {
+
+  iter <- function(l, acc) {
+    if (length(l) == 0) {
+      return(acc)
+    }
+
+    rhs_ <- l[[1]]$rhs
+    op_ <- l[[1]]$op
+
+    body_ <- transform_rhs(rhs_, acc, op_)
+
+    if (is_tee_pipe(op_)) {
+      call("{", build_pipe_call(call("%>%", acc, rhs_), NULL), iter(l[-1], acc))
+    } else {
+      iter(l[-1], body_)
+    }
+
+  }
+  iter(lst[-1], lst[[1]]$rhs)
 
 }
 
-wrap <- function(lst) {
+wrap_promise <- function(lst) {
+  iter <- function(l, acc) {
+    if (length(l) == 0) {
+      return(acc)
+    }
+
+    rhs_ <- l[[1]]$rhs
+    op_ <- l[[1]]$op
+
+    body_ <- transform_rhs(rhs_, quote(.), op_)
+    body_2 <- call("function", as.pairlist(alist(.=)), body_)
+    body_3 <- as.call(list(body_2, acc))
+
+    #if (is_tee_pipe(op_) && length(l) > 1) {
+    if (is_tee_pipe(op_)) {
+      body_ <- bquote({
+        .(prev_call)
+        .(next_call)
+      }, list(prev_call = body_,
+              next_call = transform_rhs(l[[2]]$rhs, quote(.), l[[2]]$op)))
+      body_2 <- call("function", as.pairlist(alist(.=)), body_)
+      body_3 <- as.call(list(body_2, acc))
+      iter(l[-(1:2)], body_3)
+    } else {
+      iter(l[-1], body_3)
+    }
+
+  }
+  iter(lst[-1], lst[[1]]$rhs)
+
+}
+
+wrap_eager <- function(lst) {
 
   iter2 <- function(l, sym_prev, acc = NULL) {
     if (length(l) == 0) {
@@ -267,7 +287,7 @@ build_pipe_call <- function(expr, replace_sym, use_assign_sym = FALSE) {
   lst <- get_pipe_info(expr)
   origin <- lst[[1]]$rhs
   first_op <- lst[[2]]$op
-
+  #browser()
   body_ <-
     if (as_lazy) {
       if (is_pipe_lambda(origin, first_op)) {
@@ -283,11 +303,11 @@ build_pipe_call <- function(expr, replace_sym, use_assign_sym = FALSE) {
       if (is_pipe_lambda(origin, first_op)) {
         make_lambda(lst)
       } else if (is.null(replace_sym)) {
-        wrap(lst)
+        wrap_eager(lst)
       } else {
         # this is called x %>% {(. + 1) %>% f}
         lst[[1]]$rhs <- replace_rhs_origin(origin, replace_sym)
-        wrap(lst)
+        wrap_eager(lst)
       }
     }
 
