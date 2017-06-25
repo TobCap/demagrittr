@@ -92,4 +92,10 @@ test_that("other-ops", {
   })
   test_demagrittr(e7)
 
+  # last tee op
+  e8 <- quote({
+    1:5 %>%
+      sum() %T>%
+      log()
+  })
 })

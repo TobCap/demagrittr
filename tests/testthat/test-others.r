@@ -19,4 +19,7 @@ test_that("test-others.r", {
 
   e1 <- quote(1 %>% (. %>% exp)())
   test_demagrittr(e1)
+
+  e2 <- quote(print %>% .())
+  test_demagrittr(e2)
 })
