@@ -217,24 +217,7 @@ wrap_lazy <- function(lst) {
     rhs_ <- l[[1]]$rhs
     op_ <- l[[1]]$op
 
-    body_ <-
-      if (is_dollar_pipe(op_)) {
-        call("with", acc, replace_dot_recursive(rhs_, acc))
-      } else if (is.symbol(rhs_)) {
-        as.call(list(rhs_, acc))
-      } else if (is_paren_call(rhs_)) {
-        get_rhs_paren(rhs_, acc)
-      } else if (is_braket_call(rhs_)) {
-        replace_dot_recursive(rhs_, acc)
-      } else if (has_direct_dot(rhs_)) {
-        rhs_mod <- replace_direct_dot(rhs_, acc)
-        replace_dot_recursive(rhs_mod, acc)
-      } else if (!has_direct_dot(rhs_)) {
-        rhs_mod <- add_first_dot_to_rhs(rhs_, acc)
-        replace_dot_recursive(rhs_mod, acc)
-      } else {
-        stop("missing pattern in get_rhs_mod_lazy()")
-      }
+    body_ <- transform_rhs(rhs_, acc, op_)
 
     if (is_tee_pipe(op_)) {
       call("{", build_pipe_call(call("%>%", acc, rhs_), NULL), iter(l[-1], acc))
@@ -257,6 +240,27 @@ wrap_lazy <- function(lst) {
 
 }
 
+transform_rhs <- function(rhs_, lang_prev, op_) {
+  if (is_dollar_pipe(op_)) {
+    call("with", lang_prev, replace_dot_recursive(rhs_, lang_prev))
+  } else if (is.symbol(rhs_)) {
+    as.call(c(rhs_, lang_prev))
+  } else if (is_paren_call(rhs_)) {
+    get_rhs_paren(rhs_, lang_prev)
+  } else if (is_braket_call(rhs_)) {
+    replace_dot_recursive(rhs_, lang_prev)
+  } else if (has_direct_dot(rhs_)) {
+    rhs_mod <- replace_direct_dot(rhs_, lang_prev)
+    replace_dot_recursive(rhs_, lang_prev)
+  } else if (!has_direct_dot(rhs_)) {
+    rhs_mod <- add_first_dot_to_rhs(rhs_, lang_prev)
+    replace_dot_recursive(rhs_mod, lang_prev)
+  } else {
+    stop("missing pattern in transform_rhs()")
+  }
+
+}
+
 wrap <- function(lst) {
 
   iter2 <- function(l, sym_prev, acc = NULL) {
@@ -267,24 +271,7 @@ wrap <- function(lst) {
     rhs_ <- l[[1]]$rhs
     op_ <- l[[1]]$op
 
-    body_ <-
-      if (is_dollar_pipe(op_)) {
-        call("with", sym_prev, replace_dot_recursive(rhs_, sym_prev))
-      } else if (is.symbol(rhs_)) {
-        as.call(c(rhs_, sym_prev))
-      } else if (is_paren_call(rhs_)) {
-        get_rhs_paren(rhs_, sym_prev)
-      } else if (is_braket_call(rhs_)) {
-        replace_dot_recursive(rhs_, sym_prev)
-      } else if (has_direct_dot(rhs_)) {
-        rhs_mod <- replace_direct_dot(rhs_, sym_prev)
-        replace_dot_recursive(rhs_, sym_prev)
-      } else if (!has_direct_dot(rhs_)) {
-        rhs_mod <- add_first_dot_to_rhs(rhs_, sym_prev)
-        replace_dot_recursive(rhs_mod, sym_prev)
-      } else {
-        stop("missing pattern in iter2()")
-      }
+    body_ <- transform_rhs(rhs_, sym_prev, op_)
 
     if (is_tee_pipe(op_)) {
       iter2(l[-1], sym_prev, c(acc, body_))
