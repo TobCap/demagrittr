@@ -216,7 +216,7 @@ wrap <- function(lst) {
 
   iter2 <- function(l, sym_prev, acc = NULL) {
     if (length(l) == 0) {
-      return(c(acc, sym_prev))
+      return(acc)
     }
 
     rhs_ <- l[[1]]$rhs
@@ -225,10 +225,18 @@ wrap <- function(lst) {
     body_ <- transform_rhs(rhs_, sym_prev, op_)
 
     if (is_tee_pipe(op_)) {
-      iter2(l[-1], sym_prev, c(acc, body_))
+      if (length(l) > 1) {
+        iter2(l[-1], sym_prev, c(acc, body_))
+      } else {
+        iter2(l[-1], NULL, c(acc, body_, sym_prev))
+      }
     } else {
       sym_new <- make_varname()
-      iter2(l[-1], sym_new, c(acc, call("<-", sym_new, body_)))
+      if (length(l) > 1) {
+        iter2(l[-1], sym_new, c(acc, call("<-", sym_new, body_)))
+      } else {
+        iter2(l[-1], NULL, c(acc, body_))
+      }
     }
   }
 
