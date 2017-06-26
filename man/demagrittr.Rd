@@ -11,7 +11,8 @@ demagrittr(expr, is_NSE = TRUE, mode = c("eager", "lazy", "promise"))
 
 \item{is_NSE}{if TRUE, expr is not evaluated.}
 
-\item{as_lazy}{if TRUE, pipe streams are formed into nest of call offunctions.}
+\item{mode}{choose one of "eager", "lazy", and "promise".
+Pipe streams are formed along with such mode.}
 }
 \description{
 Semantics of \code{\%>\%} is eager evaluation, the example of magrittr
@@ -29,5 +30,9 @@ demagrittr(x \%>\% f(y, z = .))
 
 demagrittr(x \%>\% f(y = nrow(.), z = ncol(.)))
 demagrittr(x \%>\% {f(y = nrow(.), z = ncol(.))})
+
+demagrittr(x \%>\% f \%>\% g, mode = "eager") # default
+demagrittr(x \%>\% f \%>\% g, mode = "lazy")
+demagrittr(x \%>\% f \%>\% g, mode = "promise")
 
 }

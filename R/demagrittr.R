@@ -6,7 +6,8 @@
 #'
 #' @param expr expression with magrittr functions such as "\%>\%"
 #' @param is_NSE if TRUE, expr is not evaluated.
-#' @param as_lazy if TRUE, pipe streams are formed into nest of call offunctions.
+#' @param mode choose one of "eager", "lazy", and "promise".
+#' Pipe streams are formed along with such mode.
 #'
 #' @examples
 #' demagrittr(x %>% f)
@@ -18,6 +19,10 @@
 #'
 #' demagrittr(x %>% f(y = nrow(.), z = ncol(.)))
 #' demagrittr(x %>% {f(y = nrow(.), z = ncol(.))})
+#'
+#' demagrittr(x %>% f %>% g, mode = "eager") # default
+#' demagrittr(x %>% f %>% g, mode = "lazy")
+#' demagrittr(x %>% f %>% g, mode = "promise")
 #'
 #' @export
 demagrittr <- function(expr, is_NSE = TRUE, mode = c("eager", "lazy", "promise")) {
