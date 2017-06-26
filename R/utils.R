@@ -60,7 +60,7 @@ make_lambda <- function(body_, wrapper) {
 }
 
 as_formals <- function(sym, default_value = quote(expr=)) {
-   as.pairlist(setNames(list(default_value), as.character(sym)))
+   as.pairlist(`names<-`(list(default_value), as.character(sym)))
 }
 
 construct_lang_manipulation <- function(ifs_expr, env_ = parent.frame()) {
