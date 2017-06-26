@@ -258,8 +258,8 @@ wrap_eager <- function(lst) {
         iter(l[-1], NULL, c(acc, body_, sym_prev))
       }
     } else {
-      sym_new <- make_varname()
       if (length(l) > 1) {
+        sym_new <- make_varname()
         iter(l[-1], sym_new, c(acc, call("<-", sym_new, body_)))
       } else {
         iter(l[-1], NULL, c(acc, body_))
