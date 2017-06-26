@@ -42,7 +42,7 @@ demagrittr(x %>% f %>% g %>% h, mode = "promise")
 
 # Manipulation for a language object
 expr0 <- quote(x %>% f %>% g %>% h)
-demagrittr(expr0, FALSE)
+demagrittr(expr0, is_NSE = FALSE)
 #> {
 #>     `#0` <- x
 #>     `#1` <- f(`#0`)
@@ -185,7 +185,7 @@ e <- quote(
 
 system.time(eval(e))
 #>    user  system elapsed 
-#>    5.99    0.00    6.08
+#>    5.88    0.00    6.14
 system.time(eval(demagrittr(e, FALSE)))
 #>    user  system elapsed 
 #>    0.09    0.00    0.09
@@ -211,18 +211,18 @@ microbenchmark(
   , "%>>%" = eval(expr3)
   , times = 1e3)
 #> Unit: microseconds
-#>                expr     min       lq      mean   median      uq      max
-#>                 %>% 453.374 466.7475 534.22088 475.2180 507.315 5131.987
-#>    demagrittr eager  13.374  15.1575  19.36210  18.2780  20.507  165.391
-#>     demagrittr lazy  10.254  11.5910  14.21407  12.9290  15.158  140.872
-#>  demagrittr promise  15.158  17.3870  21.03561  19.1700  21.845  181.439
-#>                %>>% 207.295 216.2110 250.29301 229.1395 237.609 3868.605
-#>  neval
-#>   1000
-#>   1000
-#>   1000
-#>   1000
-#>   1000
+#>                expr     min       lq       mean  median       uq
+#>                 %>% 441.337 504.1945 1322.75913 689.422 892.2585
+#>    demagrittr eager  13.374  18.2785   34.01045  22.291  29.8690
+#>     demagrittr lazy   9.808  13.3750   31.02140  16.496  22.2910
+#>  demagrittr promise  14.266  19.6160   39.83118  24.073  31.6520
+#>                %>>% 183.668 238.9460  561.67915 317.852 418.3790
+#>         max neval
+#>  104989.511  1000
+#>    5510.021  1000
+#>    5145.361  1000
+#>    3981.837  1000
+#>   19157.128  1000
 
 Reduce(function(x, y) if (identical(x, y)) y else FALSE,
        lapply(list(expr1, expr2e, expr2l, expr2p, expr3), eval))
@@ -264,17 +264,17 @@ microbenchmark(
   , times = 1)
 #> Unit: seconds
 #>                expr       min        lq      mean    median        uq
-#>                 %>% 83.380868 83.380868 83.380868 83.380868 83.380868
-#>    demagrittr eager  5.115426  5.115426  5.115426  5.115426  5.115426
-#>     demagrittr lazy  4.952262  4.952262  4.952262  4.952262  4.952262
-#>  demagrittr promise  6.994586  6.994586  6.994586  6.994586  6.994586
-#>                %>>% 24.697093 24.697093 24.697093 24.697093 24.697093
+#>                 %>% 75.461134 75.461134 75.461134 75.461134 75.461134
+#>    demagrittr eager  6.138932  6.138932  6.138932  6.138932  6.138932
+#>     demagrittr lazy  3.210860  3.210860  3.210860  3.210860  3.210860
+#>  demagrittr promise  6.350760  6.350760  6.350760  6.350760  6.350760
+#>                %>>% 19.559809 19.559809 19.559809 19.559809 19.559809
 #>        max neval
-#>  83.380868     1
-#>   5.115426     1
-#>   4.952262     1
-#>   6.994586     1
-#>  24.697093     1
+#>  75.461134     1
+#>   6.138932     1
+#>   3.210860     1
+#>   6.350760     1
+#>  19.559809     1
 ```
 
 Compiling source code
@@ -317,6 +317,60 @@ Known problems
 
 -   Not guaranteed to preserve the same visibility of a result when evaluating (printing the result or not in your console)
 -   `#{n}` is used for the prefix-name of temporary symbols in the converted language object. So there will be overwritting if you have already created such a symbol in the environment where you want to evaluate a language object convertedy by `demagrittr()`. (hope nobody uses such a tricky name as a symbol)
+-   The results where `return()` appears in middle of pipe stream differs by the mode.
+
+``` r
+expr_return <- quote(1:10 %>% sum %>% return %>% log)
+expr_return
+#> 1:10 %>% sum %>% return %>% log
+demagrittr(expr_return, is_NSE = FALSE, mode = "eager")
+#> {
+#>     `#0` <- 1:10
+#>     `#1` <- sum(`#0`)
+#>     `#2` <- return(`#1`)
+#>     log(`#2`)
+#> }
+demagrittr(expr_return, is_NSE = FALSE, mode = "lazy")
+#> log(return(sum(1:10)))
+demagrittr(expr_return, is_NSE = FALSE, mode = "promise")
+#> (function(`#2`) log(`#2`))((function(`#1`) return(`#1`))((function(`#0`) sum(`#0`))(1:10)))
+
+eval(expr_return)
+#> [1] 4.007333
+eval(demagrittr(expr_return, is_NSE = FALSE, mode = "eager"))
+#> [1] 55
+eval(demagrittr(expr_return, is_NSE = FALSE, mode = "lazy"))
+#> [1] 55
+eval(demagrittr(expr_return, is_NSE = FALSE, mode = "promise"))
+#> [1] 4.007333
+
+# not exit 
+1:10 %>% sum %>% return %>% log
+#> [1] 4.007333
+
+# but error in global environment
+{
+    `#0` <- 1:10
+    `#1` <- sum(`#0`)
+    `#2` <- return(`#1`)
+    log(`#2`)
+}
+#> [1] 55
+## execute in console 
+## Error: no function to return from, jumping to top level
+
+# error in global environment
+log(return(sum(1:10)))
+#> [1] 55
+## execute in console
+## Error: no function to return from, jumping to top level
+
+# runs, but expected result?
+(function(`#2`) log(`#2`))((function(`#1`) return(`#1`))((function(`#0`) sum(`#0`))(1:10)))
+#> [1] 4.007333
+```
+
+\`\`\`
 
 To-Do
 =====
