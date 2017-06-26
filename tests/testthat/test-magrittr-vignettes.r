@@ -1,7 +1,29 @@
-context("magrittr vignettes")
+context("magrittr-vignettes")
 suppressMessages(library("magrittr"))
 
 test_that("equiv value", {
+  test_demagrittr <- function(expr, eager = TRUE, lazy = TRUE, promise = TRUE) {
+    stopifnot(is.call(expr))
+    pipes <- c("%>%", "%T>%", "%$%", "%<>%")
+
+    mode_eager <- demagrittr(expr, FALSE, mode = "eager")
+    mode_lazy <- demagrittr(expr, FALSE, mode = "lazy")
+    mode_promise <- demagrittr(expr, FALSE, mode = "promise")
+
+    if (eager) {
+      expect_identical(eval(expr), eval(mode_eager))
+      expect_false(any(all.names(mode_eager) %in% pipes))
+    }
+    if (lazy) {
+      expect_identical(eval(expr), eval(mode_lazy))
+      expect_false(any(all.names(mode_lazy) %in% pipes))
+    }
+    if (promise) {
+      expect_identical(eval(expr), eval(mode_promise))
+      expect_false(any(all.names(mode_promise) %in% pipes))
+    }
+  }
+
   # http://cran.r-project.org/web/packages/magrittr/vignettes/magrittr.html
   e1 <- quote({
     car_data <-
@@ -10,9 +32,15 @@ test_that("equiv value", {
       aggregate(. ~ cyl, data = ., FUN = . %>% mean %>% round(2)) %>%
       transform(kpl = mpg %>% multiply_by(0.4251))
   })
-  expect_identical(eval(e1), eval(demagrittr(e1, FALSE)))
+  test_demagrittr(e1)
 
   e2 <- quote({
+    car_data <-
+      mtcars %>%
+      subset(hp > 100) %>%
+      aggregate(. ~ cyl, data = ., FUN = . %>% mean %>% round(2)) %>%
+      transform(kpl = mpg %>% multiply_by(0.4251))
+
     car_data %>%
       (function(x) {
         if (nrow(x) > 2)
@@ -20,9 +48,15 @@ test_that("equiv value", {
         else x
       })
   })
-  expect_identical(eval(e2), eval(demagrittr(e2, FALSE)))
+  test_demagrittr(e2)
 
   e3 <- quote({
+    car_data <-
+      mtcars %>%
+      subset(hp > 100) %>%
+      aggregate(. ~ cyl, data = ., FUN = . %>% mean %>% round(2)) %>%
+      transform(kpl = mpg %>% multiply_by(0.4251))
+
     car_data %>%
     {
       if (nrow(.) > 0)
@@ -30,17 +64,19 @@ test_that("equiv value", {
       else .
     }
   })
-  expect_identical(eval(e3), eval(demagrittr(e3, FALSE)))
+  test_demagrittr(e3)
 
   e4 <- quote({
     1:10 %>% (substitute(f(), list(f = sum)))
   })
-  expect_identical(eval(e4), eval(demagrittr(e4, FALSE)))
+  test_demagrittr(e4)
 
   e41 <- quote({
     1:5 %>% (call("sum", 100))
   })
-  expect_identical(eval(e41), eval(demagrittr(e41, FALSE)))
+  test_demagrittr(e41)
+
+  ### tests for addtional pipe are written in `test-other-ops.r`
 
   e5 <- quote({
     set.seed(1)
@@ -52,7 +88,7 @@ test_that("equiv value", {
         head(.)
       }
   })
-  expect_identical(eval(e5), eval(demagrittr(e5, FALSE)))
+  test_demagrittr(e5)
 
   e6 <- quote({
     set.seed(1)
@@ -62,7 +98,6 @@ test_that("equiv value", {
       head(.)
     }
   })
-  expect_identical(eval(e6), eval(demagrittr(e6, FALSE)))
-
+  test_demagrittr(e6)
 
 })

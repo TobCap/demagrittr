@@ -9,8 +9,12 @@ test_that("equiv value2", {
     aggregate(. ~ Date %>% format("%W"), ., mean)
   )
   ## unname() is required
-  expect_identical(unname(eval(weekly)), unname(eval(demagrittr(weekly, FALSE))))
-  expect_false(any(all.names(demagrittr(weekly, FALSE)) %in% "%>%"))
+  expect_identical(unname(eval(weekly)), unname(eval(demagrittr(weekly, FALSE, mode = "eager"))))
+  expect_identical(unname(eval(weekly)), unname(eval(demagrittr(weekly, FALSE, mode = "lazy"))))
+  expect_identical(unname(eval(weekly)), unname(eval(demagrittr(weekly, FALSE, mode = "promise"))))
+  expect_false(any(all.names(demagrittr(weekly, FALSE, mode = "eager")) %in% "%>%"))
+  expect_false(any(all.names(demagrittr(weekly, FALSE, mode = "lazy")) %in% "%>%"))
+  expect_false(any(all.names(demagrittr(weekly, FALSE, mode = "promise")) %in% "%>%"))
 
   windy.weeks <- quote(
     airquality %>%
@@ -19,6 +23,17 @@ test_that("equiv value2", {
     subset(Wind > 12, c(Ozone, Solar.R, Wind))
   )
 
-  expect_identical(unname(eval(windy.weeks)), unname(eval(demagrittr(windy.weeks, FALSE))))
-  expect_false(any(all.names(demagrittr(windy.weeks, FALSE)) %in% "%>%"))
+  expect_identical(
+    unname(eval(windy.weeks)),
+    unname(eval(demagrittr(windy.weeks, FALSE, mode = "eager"))))
+  expect_identical(
+    unname(eval(windy.weeks)),
+    unname(eval(demagrittr(windy.weeks, FALSE, mode = "lazy"))))
+  expect_identical(
+    unname(eval(windy.weeks)),
+    unname(eval(demagrittr(windy.weeks, FALSE, mode = "promise"))))
+  expect_false(any(all.names(demagrittr(windy.weeks, FALSE, mode = "eager")) %in% "%>%"))
+  expect_false(any(all.names(demagrittr(windy.weeks, FALSE, mode = "lazy")) %in% "%>%"))
+  expect_false(any(all.names(demagrittr(windy.weeks, FALSE, mode = "promise")) %in% "%>%"))
+
 })

@@ -4,12 +4,15 @@
 \alias{demagrittr}
 \title{Decompile magrittr's syntax to normal R's syntax}
 \usage{
-demagrittr(expr, is_NSE = TRUE)
+demagrittr(expr, is_NSE = TRUE, mode = c("eager", "lazy", "promise"))
 }
 \arguments{
 \item{expr}{expression with magrittr functions such as "\%>\%"}
 
 \item{is_NSE}{if TRUE, expr is not evaluated.}
+
+\item{mode}{choose one of "eager", "lazy", and "promise".
+Pipe streams are formed along with such mode.}
 }
 \description{
 Semantics of \code{\%>\%} is eager evaluation, the example of magrittr
@@ -28,5 +31,8 @@ demagrittr(x \%>\% f(y, z = .))
 demagrittr(x \%>\% f(y = nrow(.), z = ncol(.)))
 demagrittr(x \%>\% {f(y = nrow(.), z = ncol(.))})
 
-}
+demagrittr(x \%>\% f \%>\% g, mode = "eager") # default
+demagrittr(x \%>\% f \%>\% g, mode = "lazy")
+demagrittr(x \%>\% f \%>\% g, mode = "promise")
 
+}

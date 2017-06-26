@@ -22,6 +22,6 @@ Suggests:
     dplyr
 Depends: R(>= 2.10.0)
 VignetteBuilder: knitr
-RoxygenNote: 5.0.1
+RoxygenNote: 6.0.1
 BugReports: https://github.com/tobcap/demagrittr/issues
 ByteCompile: Yes

@@ -4,6 +4,7 @@
 #'
 #' @param in_ file path of input.
 #' @param out_ file path of output.
+#' @param mode transformed mode.
 #' @param ask ask to overwrite when `out_`` already exists
 #'
 #' @return no return. side effect on a file.
@@ -30,8 +31,10 @@
 #'
 #'
 #' @export
-demagrittr_source <- function(in_, out_, ask = TRUE) {
+demagrittr_source <- function(
+  in_, out_, mode = c("eager", "lazy", "promise"), ask = TRUE) {
   stopifnot(file.exists(in_))
+  mode <- match.arg(mode)
 
   if (ask && file.exists(out_)) {
     ans <- readline(prompt = paste0(out_, " exists. do you allow over write? (y/n) \n"))
@@ -51,7 +54,7 @@ demagrittr_source <- function(in_, out_, ask = TRUE) {
   # on.exit(closeAllConnections())
   # writeLines(deparse(e3), out_)
 
-  e2 <- lapply(e1, demagrittr, is_NSE=FALSE)
+  e2 <- lapply(e1, demagrittr, is_NSE = FALSE, mode = mode)
   e3 <- paste(unlist(sapply(e2, deparse, width.cutoff = 500L)), collapse = "\n")
   con_ <- file(out_, "w")
   on.exit(close(con_))

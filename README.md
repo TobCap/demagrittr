@@ -6,7 +6,7 @@ demagrittr
 What is this package?
 ---------------------
 
-`demagrittr()` and `demagrittr_source()` converts magrittr's syntax to eager evaluation syntax for the purpose of:
+`demagrittr()` and `demagrittr_source()` convert magrittr's syntax to eager evaluation syntax (by default) for the purpose of:
 
 -   understanding quite complicated and nested piped sentences
 -   debugging when an error occurs
@@ -28,39 +28,53 @@ Usage
 
 ``` r
 # NSE
-demagrittr(x %>% f %>% g %>% h)
+demagrittr(x %>% f %>% g %>% h) # mode = "eager" by default
 #> {
-#>     `#tmp0` <- x
-#>     `#tmp1` <- f(`#tmp0`)
-#>     `#tmp2` <- g(`#tmp1`)
-#>     `#tmp3` <- h(`#tmp2`)
-#>     `#tmp3`
+#>     `#0` <- x
+#>     `#1` <- f(`#0`)
+#>     `#2` <- g(`#1`)
+#>     h(`#2`)
 #> }
+demagrittr(x %>% f %>% g %>% h, mode = "lazy")
+#> h(g(f(x)))
+demagrittr(x %>% f %>% g %>% h, mode = "promise")
+#> (function(`#2`) h(`#2`))((function(`#1`) g(`#1`))((function(`#0`) f(`#0`))(x)))
 
 # Manipulation for a language object
 expr0 <- quote(x %>% f %>% g %>% h)
-demagrittr(expr0, FALSE)
+demagrittr(expr0, is_NSE = FALSE)
 #> {
-#>     `#tmp0` <- x
-#>     `#tmp1` <- f(`#tmp0`)
-#>     `#tmp2` <- g(`#tmp1`)
-#>     `#tmp3` <- h(`#tmp2`)
-#>     `#tmp3`
+#>     `#0` <- x
+#>     `#1` <- f(`#0`)
+#>     `#2` <- g(`#1`)
+#>     h(`#2`)
+#> }
+
+# The out put in `mode = "promise"` seems redundant but is essential in 
+# this example.
+demagrittr({set.seed(1); rnorm(1) %>% sum(., .)}, mode = "lazy")
+#> {
+#>     set.seed(1)
+#>     sum(rnorm(1), rnorm(1))
+#> }
+demagrittr({set.seed(1); rnorm(1) %>% sum(., .)}, mode = "promise")
+#> {
+#>     set.seed(1)
+#>     (function(`#0`) sum(`#0`, `#0`))(rnorm(1))
 #> }
 ```
 
-Compiling and evaluation
-------------------------
+Precompiling and evaluation
+---------------------------
 
 ``` r
 compiled0 <- demagrittr(1:10 %>% sum %>% log %>% sin)
 print(compiled0)
 #> {
-#>     `#tmp0` <- 1:10
-#>     `#tmp1` <- sum(`#tmp0`)
-#>     `#tmp2` <- log(`#tmp1`)
-#>     `#tmp3` <- sin(`#tmp2`)
-#>     `#tmp3`
+#>     `#0` <- 1:10
+#>     `#1` <- sum(`#0`)
+#>     `#2` <- log(`#1`)
+#>     sin(`#2`)
 #> }
 eval(compiled0)
 #> [1] -0.7615754
@@ -71,12 +85,15 @@ Building (unary) functions
 
 ``` r
 demagrittr(f <- . %>% cos %>% sin)
-#> f <- function(.) {
-#>     `#tmp4` <- .
-#>     `#tmp5` <- cos(`#tmp4`)
-#>     `#tmp6` <- sin(`#tmp5`)
-#>     `#tmp6`
+#> f <- function(..) {
+#>     `#0` <- ..
+#>     `#1` <- cos(`#0`)
+#>     sin(`#1`)
 #> }
+demagrittr(f <- . %>% cos %>% sin, mode = "lazy")
+#> f <- function(..) sin(cos(..))
+demagrittr(f <- . %>% cos %>% sin, mode = "promise")
+#> f <- function(..) (function(`#1`) sin(`#1`))((function(`#0`) cos(`#0`))(..))
 
 # The resul is just a language object. You need to eval().
 eval(demagrittr(f <- . %>% cos %>% sin))
@@ -97,11 +114,10 @@ demagrittr(
   colSums
 )
 #> {
-#>     `#tmp0` <- rnorm(200)
-#>     `#tmp1` <- matrix(`#tmp0`, ncol = 2)
-#>     plot(`#tmp1`)
-#>     `#tmp3` <- colSums(`#tmp1`)
-#>     `#tmp3`
+#>     `#0` <- rnorm(200)
+#>     `#1` <- matrix(`#0`, ncol = 2)
+#>     plot(`#1`)
+#>     colSums(`#1`)
 #> }
 ```
 
@@ -119,15 +135,13 @@ data.frame(z = rnorm(100)) %$%
 })
 #> {
 #>     {
-#>         `#tmp0` <- iris
-#>         `#tmp1` <- subset(`#tmp0`, Sepal.Length > mean(Sepal.Length))
-#>         `#tmp2` <- with(`#tmp1`, cor(Sepal.Length, Sepal.Width))
-#>         `#tmp2`
+#>         `#0` <- iris
+#>         `#1` <- subset(`#0`, Sepal.Length > mean(Sepal.Length))
+#>         with(`#1`, cor(Sepal.Length, Sepal.Width))
 #>     }
 #>     {
-#>         `#tmp3` <- data.frame(z = rnorm(100))
-#>         `#tmp4` <- with(`#tmp3`, ts.plot(z))
-#>         `#tmp4`
+#>         `#2` <- data.frame(z = rnorm(100))
+#>         with(`#2`, ts.plot(z))
 #>     }
 #> }
 ```
@@ -145,14 +159,12 @@ iris$Sepal.Length %<>% sqrt
 })
 #> {
 #>     iris$Sepal.Length <- {
-#>         `#tmp0` <- iris$Sepal.Length
-#>         `#tmp1` <- sqrt(`#tmp0`)
-#>         `#tmp1`
+#>         `#0` <- iris$Sepal.Length
+#>         sqrt(`#0`)
 #>     }
-#>     {
-#>         `#tmp2` <- iris$Sepal.Length
-#>         `#tmp3` <- sqrt(`#tmp2`)
-#>         iris$Sepal.Length <- `#tmp3`
+#>     iris$Sepal.Length <- {
+#>         `#1` <- iris$Sepal.Length
+#>         sqrt(`#1`)
 #>     }
 #> }
 ```
@@ -173,10 +185,10 @@ e <- quote(
 
 system.time(eval(e))
 #>    user  system elapsed 
-#>    5.61    0.02    5.64
+#>    5.88    0.00    6.14
 system.time(eval(demagrittr(e, FALSE)))
 #>    user  system elapsed 
-#>    0.09    0.00    0.10
+#>    0.09    0.00    0.09
 ```
 
 ``` r
@@ -186,63 +198,83 @@ library("pipeR")
 library("demagrittr")
 
 expr1 <- quote(1:10 %>% sum %>% log %>% sin)
-expr2 <- demagrittr(expr1, FALSE)
+expr2e <- demagrittr(expr1, FALSE, mode = "eager")
+expr2l <- demagrittr(expr1, FALSE, mode = "lazy")
+expr2p <- demagrittr(expr1, FALSE, mode = "promise")
 expr3 <- quote(1:10 %>>% sum %>>% log %>>% sin)
 
 microbenchmark(
     "%>%" = eval(expr1)
-  , demagrittr = eval(expr2)
+  , "demagrittr eager" = eval(expr2e)
+  , "demagrittr lazy" = eval(expr2l)
+  , "demagrittr promise" = eval(expr2p)
   , "%>>%" = eval(expr3)
   , times = 1e3)
 #> Unit: microseconds
-#>        expr     min      lq      mean   median      uq      max neval
-#>         %>% 337.021 369.564 481.86102 437.3245 482.127 6280.788  1000
-#>  demagrittr  11.145  16.049  22.11929  18.7240  21.176 1982.445  1000
-#>        %>>% 164.053 187.234 243.93021 217.1020 241.175 3678.691  1000
+#>                expr     min       lq       mean  median       uq
+#>                 %>% 441.337 504.1945 1322.75913 689.422 892.2585
+#>    demagrittr eager  13.374  18.2785   34.01045  22.291  29.8690
+#>     demagrittr lazy   9.808  13.3750   31.02140  16.496  22.2910
+#>  demagrittr promise  14.266  19.6160   39.83118  24.073  31.6520
+#>                %>>% 183.668 238.9460  561.67915 317.852 418.3790
+#>         max neval
+#>  104989.511  1000
+#>    5510.021  1000
+#>    5145.361  1000
+#>    3981.837  1000
+#>   19157.128  1000
 
-identical(eval(expr1), eval(expr2))
-#> [1] TRUE
+Reduce(function(x, y) if (identical(x, y)) y else FALSE,
+       lapply(list(expr1, expr2e, expr2l, expr2p, expr3), eval))
+#> [1] -0.7615754
 ```
 
 ``` r
 # from http://renkun.me/blog/2014/08/08/difference-between-magrittr-and-pipeR.html#performance
-set.seed(1)
-expr4 <- quote(
+
+expr4 <- quote({
+  set.seed(1)
   lapply(1:100000, function(i) {
-    sample(letters,6,replace = T) %>%
+    sample(letters, 6, replace = T) %>%
       paste(collapse = "") %>%
       "=="("rstats")
   })
-)
-expr5 <- demagrittr(expr4, FALSE)
+})
 
-set.seed(1)
-expr6 <- quote(
+expr5e <- demagrittr(expr4, FALSE, mode = "eager")
+expr5l <- demagrittr(expr4, FALSE, mode = "lazy")
+expr5p <- demagrittr(expr4, FALSE, mode = "promise")
+
+expr6 <- quote({
+  set.seed(1)
   lapply(1:100000, function(i) {
-    sample(letters,6,replace = T) %>>%
+    sample(letters, 6, replace = T) %>>%
       paste(collapse = "") %>>%
       "=="("rstats")
   })
-)
+})
 
 # My poor laptop takes huge time. The unit is 'seconds'.
 microbenchmark(
     "%>%" = eval(expr4)
-  , demagrittr = eval(expr5)
+  , "demagrittr eager" = eval(expr5e)
+  , "demagrittr lazy" = eval(expr5l)
+  , "demagrittr promise" = eval(expr5p)
   , "%>>%" = eval(expr6)
   , times = 1)
 #> Unit: seconds
-#>        expr       min        lq      mean    median        uq       max
-#>         %>% 64.468622 64.468622 64.468622 64.468622 64.468622 64.468622
-#>  demagrittr  4.907491  4.907491  4.907491  4.907491  4.907491  4.907491
-#>        %>>% 21.258164 21.258164 21.258164 21.258164 21.258164 21.258164
-#>  neval
-#>      1
-#>      1
-#>      1
-
-identical(eval(expr4), eval(expr5))
-#> [1] TRUE
+#>                expr       min        lq      mean    median        uq
+#>                 %>% 75.461134 75.461134 75.461134 75.461134 75.461134
+#>    demagrittr eager  6.138932  6.138932  6.138932  6.138932  6.138932
+#>     demagrittr lazy  3.210860  3.210860  3.210860  3.210860  3.210860
+#>  demagrittr promise  6.350760  6.350760  6.350760  6.350760  6.350760
+#>                %>>% 19.559809 19.559809 19.559809 19.559809 19.559809
+#>        max neval
+#>  75.461134     1
+#>   6.138932     1
+#>   3.210860     1
+#>   6.350760     1
+#>  19.559809     1
 ```
 
 Compiling source code
@@ -274,10 +306,9 @@ cat(paste0(readLines(in_path), collapse="\n"))
 cat(paste0(readLines(out_path), collapse="\n"))
 #> x <- data.frame(a = 1:5, b = 6:10)
 #> y <- {
-#>     `#tmp0` <- x
-#>     `#tmp1` <- select(`#tmp0`, b)
-#>     `#tmp2` <- filter(`#tmp1`, b >= 8)
-#>     `#tmp2`
+#>     `#0` <- x
+#>     `#1` <- select(`#0`, b)
+#>     filter(`#1`, b >= 8)
 #> }
 ```
 
@@ -285,14 +316,63 @@ Known problems
 ==============
 
 -   Not guaranteed to preserve the same visibility of a result when evaluating (printing the result or not in your console)
--   `#tmp{n}` is used for the prefix-name of temporary symbols in the converted language object. So there will be overwritting if you have already created such a symbol in the environment where you want to evaluate a language object convertedy by `demagrittr()`. (hope nobody uses such a tricky name as a symbol)
+-   `#{n}` is used for the prefix-name of temporary symbols in the converted language object. So there will be overwritting if you have already created such a symbol in the environment where you want to evaluate a language object convertedy by `demagrittr()`. (hope nobody uses such a tricky name as a symbol)
+-   The results where `return()` appears in middle of pipe stream differs by the mode.
+
+``` r
+expr_return <- quote(1:10 %>% sum %>% return %>% log)
+expr_return
+#> 1:10 %>% sum %>% return %>% log
+demagrittr(expr_return, is_NSE = FALSE, mode = "eager")
+#> {
+#>     `#0` <- 1:10
+#>     `#1` <- sum(`#0`)
+#>     `#2` <- return(`#1`)
+#>     log(`#2`)
+#> }
+demagrittr(expr_return, is_NSE = FALSE, mode = "lazy")
+#> log(return(sum(1:10)))
+demagrittr(expr_return, is_NSE = FALSE, mode = "promise")
+#> (function(`#2`) log(`#2`))((function(`#1`) return(`#1`))((function(`#0`) sum(`#0`))(1:10)))
+
+eval(expr_return)
+#> [1] 4.007333
+eval(demagrittr(expr_return, is_NSE = FALSE, mode = "eager"))
+#> [1] 55
+eval(demagrittr(expr_return, is_NSE = FALSE, mode = "lazy"))
+#> [1] 55
+eval(demagrittr(expr_return, is_NSE = FALSE, mode = "promise"))
+#> [1] 4.007333
+
+# not exit 
+1:10 %>% sum %>% return %>% log
+#> [1] 4.007333
+
+# but error in global environment
+{
+    `#0` <- 1:10
+    `#1` <- sum(`#0`)
+    `#2` <- return(`#1`)
+    log(`#2`)
+}
+#> [1] 55
+## execute in console 
+## Error: no function to return from, jumping to top level
+
+# error in global environment
+log(return(sum(1:10)))
+#> [1] 55
+## execute in console
+## Error: no function to return from, jumping to top level
+
+# runs, but expected result?
+(function(`#2`) log(`#2`))((function(`#1`) return(`#1`))((function(`#0`) sum(`#0`))(1:10)))
+#> [1] 4.007333
+```
+
+\`\`\`
 
 To-Do
 =====
 
--   `demagrittr_lazy()`: convert lazy evaluation like
-
-    ``` r
-    demagrittr_lazy(x %>% f %>% g)
-    #> g(f(x))
-    ```
+-   Please suggest problems in issue.

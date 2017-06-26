@@ -6,6 +6,8 @@
 #'
 #' @param expr expression with magrittr functions such as "\%>\%"
 #' @param is_NSE if TRUE, expr is not evaluated.
+#' @param mode choose one of "eager", "lazy", and "promise".
+#' Pipe streams are formed along with such mode.
 #'
 #' @examples
 #' demagrittr(x %>% f)
@@ -18,15 +20,15 @@
 #' demagrittr(x %>% f(y = nrow(.), z = ncol(.)))
 #' demagrittr(x %>% {f(y = nrow(.), z = ncol(.))})
 #'
+#' demagrittr(x %>% f %>% g, mode = "eager") # default
+#' demagrittr(x %>% f %>% g, mode = "lazy")
+#' demagrittr(x %>% f %>% g, mode = "promise")
+#'
 #' @export
-demagrittr <- function(expr, is_NSE = TRUE) {
-  env <- parent.env(environment()) # getNamespace("demagrittr")
-  #assign("var_id", 0L, envir = env)
-  on.exit({
-    assign("var_id", 0L, envir = env)
-    rm_tmp_symbols_if_exists()
-  })
-  assign("pf_", parent.frame(), envir = env)
+demagrittr <- function(expr, is_NSE = TRUE, mode = c("eager", "lazy", "promise")) {
+  ## Initialize variables that are used for side-effect purpose
+  init_(pf_ = parent.frame(), mode = match.arg(mode))
+  on.exit({init_(pf_ = emptyenv(), mode = NULL)})
 
   e0 <- if (is_NSE) substitute(expr) else expr
 

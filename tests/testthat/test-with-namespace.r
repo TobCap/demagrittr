@@ -6,7 +6,15 @@ test_that("equiv value7", {
   e2 <- quote(Nile %>% base::mean()) # run
   e3 <- quote(Nile %>% base::mean(.)) # run
 
-  expect_error(eval(demagrittr(e1, FALSE)))
-  expect_identical(eval(e2), eval(demagrittr(e2, FALSE)))
-  expect_identical(eval(e3), eval(demagrittr(e3, FALSE)))
+  expect_error(eval(demagrittr(e1, FALSE, mode = "eager")))
+  expect_error(eval(demagrittr(e1, FALSE, mode = "lazy")))
+  expect_error(eval(demagrittr(e1, FALSE, mode = "promise")))
+
+  expect_identical(eval(e2), eval(demagrittr(e2, FALSE, mode = "eager")))
+  expect_identical(eval(e2), eval(demagrittr(e2, FALSE, mode = "lazy")))
+  expect_identical(eval(e2), eval(demagrittr(e3, FALSE, mode = "promise")))
+
+  expect_identical(eval(e3), eval(demagrittr(e3, FALSE, mode = "eager")))
+  expect_identical(eval(e3), eval(demagrittr(e3, FALSE, mode = "lazy")))
+  expect_identical(eval(e3), eval(demagrittr(e3, FALSE, mode = "promise")))
 })

@@ -4,12 +4,15 @@
 \alias{demagrittr_source}
 \title{Convert R's source file to non \%>\% code.}
 \usage{
-demagrittr_source(in_, out_, ask = TRUE)
+demagrittr_source(in_, out_, mode = c("eager", "lazy", "promise"),
+  ask = TRUE)
 }
 \arguments{
 \item{in_}{file path of input.}
 
 \item{out_}{file path of output.}
+
+\item{mode}{transformed mode.}
 
 \item{ask}{ask to overwrite when `out_`` already exists}
 }
@@ -42,4 +45,3 @@ cat(paste0(readLines(out_path), collapse="\\n"))
 
 
 }
-
