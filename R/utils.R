@@ -277,39 +277,20 @@ build_pipe_call <- function(expr, replace_sym, use_assign_sym = FALSE) {
   lst <- get_pipe_info(expr)
   origin <- lst[[1]]$rhs
   first_op <- lst[[2]]$op
-  #browser()
+
+  wrapper <- switch(mode,
+                    "eager" = wrap_eager,
+                    "lazy" = wrap_lazy,
+                    "promise" = wrap_promise,
+                    stop("The selected mode was invalid."))
   body_ <-
-    if (mode == "lazy") {
-      if (is_pipe_lambda(origin, first_op)) {
-        make_lambda(lst, wrap_lazy)
-      } else if (is.null(replace_sym)) {
-        wrap_lazy(lst)
-      } else {
-        lst[[1]]$rhs <- replace_rhs_origin(origin, replace_sym)
-        wrap_lazy(lst)
-      }
-    } else if (mode == "eager") {
-      # as eager
-      if (is_pipe_lambda(origin, first_op)) {
-        make_lambda(lst, wrap_eager)
-      } else if (is.null(replace_sym)) {
-        wrap_eager(lst)
-      } else {
-        # this is called x %>% {(. + 1) %>% f}
-        lst[[1]]$rhs <- replace_rhs_origin(origin, replace_sym)
-        wrap_eager(lst)
-      }
+    if (is_pipe_lambda(origin, first_op)) {
+        make_lambda(lst, wrapper)
+    } else if (is.null(replace_sym)) {
+      wrapper(lst)
     } else {
-      # mode == "promise"
-      if (is_pipe_lambda(origin, first_op)) {
-        make_lambda(lst, wrap_promise)
-      } else if (is.null(replace_sym)) {
-        wrap_promise(lst)
-      } else {
-        # this is called x %>% {(. + 1) %>% f}
-        lst[[1]]$rhs <- replace_rhs_origin(origin, replace_sym)
-        wrap_promise(lst)
-      }
+      lst[[1]]$rhs <- replace_rhs_origin(origin, replace_sym)
+      wrapper(lst)
     }
 
   if (is_compound_pipe(first_op)) {
