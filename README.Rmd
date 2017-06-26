@@ -15,8 +15,8 @@ knitr::opts_chunk$set(
 # demagrittr
 
 ## What is this package?
-`demagrittr()` and `demagrittr_source()` converts magrittr's syntax to eager evaluation syntax for
-the purpose of: 
+`demagrittr()` and `demagrittr_source()` convert magrittr's syntax to eager
+evaluation syntax (by default) for the purpose of: 
 
 + understanding quite complicated and nested piped sentences
 + debugging when an error occurs
@@ -40,14 +40,21 @@ library(demagrittr)
 ## Usage
 ```{r}
 # NSE
-demagrittr(x %>% f %>% g %>% h)
+demagrittr(x %>% f %>% g %>% h) # mode = "eager" by default
+demagrittr(x %>% f %>% g %>% h, mode = "lazy")
+demagrittr(x %>% f %>% g %>% h, mode = "promise")
 
 # Manipulation for a language object
 expr0 <- quote(x %>% f %>% g %>% h)
 demagrittr(expr0, FALSE)
+
+# The out put in `mode = "promise"` seems redundant but is essential in 
+# this example.
+demagrittr({set.seed(1); rnorm(1) %>% sum(., .)}, mode = "lazy")
+demagrittr({set.seed(1); rnorm(1) %>% sum(., .)}, mode = "promise")
 ```
 
-## Compiling and evaluation
+## Precompiling and evaluation
 ```{r}
 compiled0 <- demagrittr(1:10 %>% sum %>% log %>% sin)
 print(compiled0)
@@ -57,6 +64,8 @@ eval(compiled0)
 ## Building (unary) functions
 ```{r}
 demagrittr(f <- . %>% cos %>% sin)
+demagrittr(f <- . %>% cos %>% sin, mode = "lazy")
+demagrittr(f <- . %>% cos %>% sin, mode = "promise")
 
 # The resul is just a language object. You need to eval().
 eval(demagrittr(f <- . %>% cos %>% sin))
@@ -120,47 +129,56 @@ library("pipeR")
 library("demagrittr")
 
 expr1 <- quote(1:10 %>% sum %>% log %>% sin)
-expr2 <- demagrittr(expr1, FALSE)
+expr2e <- demagrittr(expr1, FALSE, mode = "eager")
+expr2l <- demagrittr(expr1, FALSE, mode = "lazy")
+expr2p <- demagrittr(expr1, FALSE, mode = "promise")
 expr3 <- quote(1:10 %>>% sum %>>% log %>>% sin)
 
 microbenchmark(
     "%>%" = eval(expr1)
-  , demagrittr = eval(expr2)
+  , "demagrittr eager" = eval(expr2e)
+  , "demagrittr lazy" = eval(expr2l)
+  , "demagrittr promise" = eval(expr2p)
   , "%>>%" = eval(expr3)
   , times = 1e3)
 
-identical(eval(expr1), eval(expr2))
+Reduce(function(x, y) if (identical(x, y)) y else FALSE,
+       lapply(list(expr1, expr2e, expr2l, expr2p, expr3), eval))
 ```
 
 ```{r}
 # from http://renkun.me/blog/2014/08/08/difference-between-magrittr-and-pipeR.html#performance
-set.seed(1)
-expr4 <- quote(
+
+expr4 <- quote({
+  set.seed(1)
   lapply(1:100000, function(i) {
-    sample(letters,6,replace = T) %>%
+    sample(letters, 6, replace = T) %>%
       paste(collapse = "") %>%
       "=="("rstats")
   })
-)
-expr5 <- demagrittr(expr4, FALSE)
+})
 
-set.seed(1)
-expr6 <- quote(
+expr5e <- demagrittr(expr4, FALSE, mode = "eager")
+expr5l <- demagrittr(expr4, FALSE, mode = "lazy")
+expr5p <- demagrittr(expr4, FALSE, mode = "promise")
+
+expr6 <- quote({
+  set.seed(1)
   lapply(1:100000, function(i) {
-    sample(letters,6,replace = T) %>>%
+    sample(letters, 6, replace = T) %>>%
       paste(collapse = "") %>>%
       "=="("rstats")
   })
-)
+})
 
 # My poor laptop takes huge time. The unit is 'seconds'.
 microbenchmark(
     "%>%" = eval(expr4)
-  , demagrittr = eval(expr5)
+  , "demagrittr eager" = eval(expr5e)
+  , "demagrittr lazy" = eval(expr5l)
+  , "demagrittr promise" = eval(expr5p)
   , "%>>%" = eval(expr6)
   , times = 1)
-
-identical(eval(expr4), eval(expr5))
 
 ```
 
@@ -190,14 +208,10 @@ cat(paste0(readLines(out_path), collapse="\n"))
 # Known problems
 * Not guaranteed to preserve the same visibility of a result when evaluating
 (printing the result or not in your console)
-* `#tmp{n}` is used for the prefix-name of temporary symbols in the converted
+* `#{n}` is used for the prefix-name of temporary symbols in the converted
 language object. So there will be overwritting if you have already created
 such a symbol in the environment where you want to evaluate a language object
 convertedy by `demagrittr()`. (hope nobody uses such a tricky name as a symbol)
 
 # To-Do
-* `demagrittr_lazy()`: convert lazy evaluation like
-```r
-demagrittr_lazy(x %>% f %>% g)
-#> g(f(x))
-```
+* Please suggest problems in issue.
