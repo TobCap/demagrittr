@@ -50,7 +50,7 @@ demagrittr(expr0, is_NSE = FALSE)
 #>     h(`#2`)
 #> }
 
-# The out put in `mode = "promise"` seems redundant but is essential in 
+# The output in `mode = "promise"` seems redundant but is essential in 
 # this example.
 demagrittr({set.seed(1); rnorm(1) %>% sum(., .)}, mode = "lazy")
 #> {
@@ -90,8 +90,10 @@ demagrittr(f <- . %>% cos %>% sin)
 #>     `#1` <- cos(`#0`)
 #>     sin(`#1`)
 #> }
+
 demagrittr(f <- . %>% cos %>% sin, mode = "lazy")
 #> f <- function(..) sin(cos(..))
+
 demagrittr(f <- . %>% cos %>% sin, mode = "promise")
 #> f <- function(..) (function(`#1`) sin(`#1`))((function(`#0`) cos(`#0`))(..))
 
@@ -185,10 +187,10 @@ e <- quote(
 
 system.time(eval(e))
 #>    user  system elapsed 
-#>    5.88    0.00    6.14
+#>    7.09    0.03    8.11
 system.time(eval(demagrittr(e, FALSE)))
 #>    user  system elapsed 
-#>    0.09    0.00    0.09
+#>    0.10    0.02    0.12
 ```
 
 ``` r
@@ -211,18 +213,18 @@ microbenchmark(
   , "%>>%" = eval(expr3)
   , times = 1e3)
 #> Unit: microseconds
-#>                expr     min       lq       mean  median       uq
-#>                 %>% 441.337 504.1945 1322.75913 689.422 892.2585
-#>    demagrittr eager  13.374  18.2785   34.01045  22.291  29.8690
-#>     demagrittr lazy   9.808  13.3750   31.02140  16.496  22.2910
-#>  demagrittr promise  14.266  19.6160   39.83118  24.073  31.6520
-#>                %>>% 183.668 238.9460  561.67915 317.852 418.3790
-#>         max neval
-#>  104989.511  1000
-#>    5510.021  1000
-#>    5145.361  1000
-#>    3981.837  1000
-#>   19157.128  1000
+#>                expr     min       lq      mean   median       uq       max
+#>                 %>% 304.478 324.5380 578.35901 369.5640 674.4865 21313.835
+#>    demagrittr eager   8.471  11.5920  23.41654  14.7120  22.2905  2394.804
+#>     demagrittr lazy   6.687   8.0250  15.27903  10.2540  16.0500  1041.374
+#>  demagrittr promise  10.254  12.4830  20.27637  15.1580  24.5190   270.597
+#>                %>>% 140.871 155.1365 254.56452 173.6375 306.2610  2844.609
+#>  neval
+#>   1000
+#>   1000
+#>   1000
+#>   1000
+#>   1000
 
 Reduce(function(x, y) if (identical(x, y)) y else FALSE,
        lapply(list(expr1, expr2e, expr2l, expr2p, expr3), eval))
@@ -264,17 +266,17 @@ microbenchmark(
   , times = 1)
 #> Unit: seconds
 #>                expr       min        lq      mean    median        uq
-#>                 %>% 75.461134 75.461134 75.461134 75.461134 75.461134
-#>    demagrittr eager  6.138932  6.138932  6.138932  6.138932  6.138932
-#>     demagrittr lazy  3.210860  3.210860  3.210860  3.210860  3.210860
-#>  demagrittr promise  6.350760  6.350760  6.350760  6.350760  6.350760
-#>                %>>% 19.559809 19.559809 19.559809 19.559809 19.559809
+#>                 %>% 91.670867 91.670867 91.670867 91.670867 91.670867
+#>    demagrittr eager  5.685600  5.685600  5.685600  5.685600  5.685600
+#>     demagrittr lazy  7.687224  7.687224  7.687224  7.687224  7.687224
+#>  demagrittr promise  5.710139  5.710139  5.710139  5.710139  5.710139
+#>                %>>% 23.769243 23.769243 23.769243 23.769243 23.769243
 #>        max neval
-#>  75.461134     1
-#>   6.138932     1
-#>   3.210860     1
-#>   6.350760     1
-#>  19.559809     1
+#>  91.670867     1
+#>   5.685600     1
+#>   7.687224     1
+#>   5.710139     1
+#>  23.769243     1
 ```
 
 Compiling source code
@@ -323,6 +325,7 @@ Known problems
 expr_return <- quote(1:10 %>% sum %>% return %>% log)
 expr_return
 #> 1:10 %>% sum %>% return %>% log
+
 demagrittr(expr_return, is_NSE = FALSE, mode = "eager")
 #> {
 #>     `#0` <- 1:10
@@ -330,25 +333,30 @@ demagrittr(expr_return, is_NSE = FALSE, mode = "eager")
 #>     `#2` <- return(`#1`)
 #>     log(`#2`)
 #> }
+
 demagrittr(expr_return, is_NSE = FALSE, mode = "lazy")
 #> log(return(sum(1:10)))
+
 demagrittr(expr_return, is_NSE = FALSE, mode = "promise")
 #> (function(`#2`) log(`#2`))((function(`#1`) return(`#1`))((function(`#0`) sum(`#0`))(1:10)))
 
 eval(expr_return)
 #> [1] 4.007333
+
 eval(demagrittr(expr_return, is_NSE = FALSE, mode = "eager"))
 #> [1] 55
+
 eval(demagrittr(expr_return, is_NSE = FALSE, mode = "lazy"))
 #> [1] 55
+
 eval(demagrittr(expr_return, is_NSE = FALSE, mode = "promise"))
 #> [1] 4.007333
 
-# not exit 
+## runs but expected output?
 1:10 %>% sum %>% return %>% log
 #> [1] 4.007333
 
-# but error in global environment
+# The code below occurs error in console
 {
     `#0` <- 1:10
     `#1` <- sum(`#0`)
@@ -359,18 +367,15 @@ eval(demagrittr(expr_return, is_NSE = FALSE, mode = "promise"))
 ## execute in console 
 ## Error: no function to return from, jumping to top level
 
-# error in global environment
+# Also error in console
 log(return(sum(1:10)))
 #> [1] 55
-## execute in console
 ## Error: no function to return from, jumping to top level
 
 # runs, but expected result?
 (function(`#2`) log(`#2`))((function(`#1`) return(`#1`))((function(`#0`) sum(`#0`))(1:10)))
 #> [1] 4.007333
 ```
-
-\`\`\`
 
 To-Do
 =====

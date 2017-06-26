@@ -48,7 +48,7 @@ demagrittr(x %>% f %>% g %>% h, mode = "promise")
 expr0 <- quote(x %>% f %>% g %>% h)
 demagrittr(expr0, is_NSE = FALSE)
 
-# The out put in `mode = "promise"` seems redundant but is essential in 
+# The output in `mode = "promise"` seems redundant but is essential in 
 # this example.
 demagrittr({set.seed(1); rnorm(1) %>% sum(., .)}, mode = "lazy")
 demagrittr({set.seed(1); rnorm(1) %>% sum(., .)}, mode = "promise")
@@ -64,7 +64,9 @@ eval(compiled0)
 ## Building (unary) functions
 ```{r}
 demagrittr(f <- . %>% cos %>% sin)
+
 demagrittr(f <- . %>% cos %>% sin, mode = "lazy")
+
 demagrittr(f <- . %>% cos %>% sin, mode = "promise")
 
 # The resul is just a language object. You need to eval().
@@ -216,19 +218,25 @@ convertedy by `demagrittr()`. (hope nobody uses such a tricky name as a symbol)
 ```{r}
 expr_return <- quote(1:10 %>% sum %>% return %>% log)
 expr_return
+
 demagrittr(expr_return, is_NSE = FALSE, mode = "eager")
+
 demagrittr(expr_return, is_NSE = FALSE, mode = "lazy")
+
 demagrittr(expr_return, is_NSE = FALSE, mode = "promise")
 
 eval(expr_return)
+
 eval(demagrittr(expr_return, is_NSE = FALSE, mode = "eager"))
+
 eval(demagrittr(expr_return, is_NSE = FALSE, mode = "lazy"))
+
 eval(demagrittr(expr_return, is_NSE = FALSE, mode = "promise"))
 
-# not exit 
+## runs but expected output?
 1:10 %>% sum %>% return %>% log
 
-# but error in global environment
+# The code below occurs error in console
 {
     `#0` <- 1:10
     `#1` <- sum(`#0`)
@@ -238,16 +246,12 @@ eval(demagrittr(expr_return, is_NSE = FALSE, mode = "promise"))
 ## execute in console 
 ## Error: no function to return from, jumping to top level
 
-# error in global environment
+# Also error in console
 log(return(sum(1:10)))
-## execute in console
 ## Error: no function to return from, jumping to top level
 
 # runs, but expected result?
 (function(`#2`) log(`#2`))((function(`#1`) return(`#1`))((function(`#0`) sum(`#0`))(1:10)))
-```
-     
-
 ```
 
 # To-Do
