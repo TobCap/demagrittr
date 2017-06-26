@@ -60,7 +60,7 @@ make_lambda <- function(body_, wrapper) {
 }
 
 as_formals <- function(sym, default_value = quote(expr=)) {
-   as.pairlist(setNames(list(default_value), as.character(sym)))
+   as.pairlist(`names<-`(list(default_value), as.character(sym)))
 }
 
 construct_lang_manipulation <- function(ifs_expr, env_ = parent.frame()) {
@@ -258,8 +258,8 @@ wrap_eager <- function(lst) {
         iter(l[-1], NULL, c(acc, body_, sym_prev))
       }
     } else {
-      sym_new <- make_varname()
       if (length(l) > 1) {
+        sym_new <- make_varname()
         iter(l[-1], sym_new, c(acc, call("<-", sym_new, body_)))
       } else {
         iter(l[-1], NULL, c(acc, body_))
@@ -284,8 +284,8 @@ replace_rhs_origin <- function(rhs, replace_sym) {
 
 add_first_dot_to_rhs <- function(rhs, new_call) {
   ## rhs[[1]] should be passed recuresively
-  # > demagrittr(1 %>% (. %>% exp)(), mode = "lazy")
-  # (function(.) exp(.))(1)
+  # > demagrittr(1 %>% (. %>% round(2))(), mode = "lazy")
+  # (function(..) round(.., 2))(1.2345) #-> 1.23
   as.call(c(dig_ast(rhs[[1]]), new_call, as.list(rhs)[-1]))
 }
 
