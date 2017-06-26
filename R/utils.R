@@ -5,15 +5,15 @@
 #                    internal=TRUE, overwrite = TRUE)
 pf_ <- NULL
 var_id <- 0L
-as_lazy <- FALSE
+mode <- NULL
 utils::globalVariables(c("expr_", "iter_"))
 
-init_ <- function(pf_, as_lazy) {
+init_ <- function(pf_, mode) {
   pkg_env <- parent.env(environment()) # getNamespace("demagrittr")
 
   rm_tmp_symbols_if_exists(pf_)
   assign("var_id", 0L, envir = pkg_env)
-  assign("as_lazy", as_lazy, envir = pkg_env)
+  assign("mode", mode, envir = pkg_env)
   assign("pf_", pf_, envir = pkg_env)
 
   invisible()
@@ -40,7 +40,7 @@ rm_tmp_symbols_if_exists <- function(env) {
    , envir = env)
 }
 
-make_lambda <- function(body_) {
+make_lambda_eager <- function(body_) {
   arg_ <- as.vector(list(. = quote(expr=)), "pairlist")
   call("function", arg_, wrap_eager(body_))
 }
@@ -52,6 +52,13 @@ make_lambda_lazy <- function(body_) {
   body_[[1]]$rhs <- quote(..)
   call("function", arg_, wrap_lazy(body_))
 }
+
+make_lambda_promise <- function(body_) {
+  arg_ <- as.vector(list(. = quote(expr=)), "pairlist")
+  call("function", arg_, wrap_promise(body_))
+}
+
+
 
 construct_lang_manipulation <- function(ifs_expr, env_ = parent.frame()) {
   ifs <- substitute(ifs_expr)
@@ -150,7 +157,7 @@ get_rhs_paren <- function(rhs_, sym_prev) {
             rhs_mod[[1]] <- parse(text = deparse(rhs_mod[[1]], width.cutoff = 500L))[[1]]
           }
         }
-        build_pipe_call(call("%>%", sym_prev, rhs_mod), NULL)
+        call("(", build_pipe_call(call("%>%", sym_prev, rhs_mod), NULL))
       }
     , as.call(c(dig_ast(rhs_), sym_prev))
   )
@@ -201,6 +208,7 @@ wrap_lazy <- function(lst) {
 }
 
 wrap_promise <- function(lst) {
+
   iter <- function(l, acc) {
     if (length(l) == 0) {
       return(acc)
@@ -209,21 +217,16 @@ wrap_promise <- function(lst) {
     rhs_ <- l[[1]]$rhs
     op_ <- l[[1]]$op
 
-    body_ <- transform_rhs(rhs_, quote(.), op_)
-    body_2 <- call("function", as.pairlist(alist(.=)), body_)
-    body_3 <- as.call(list(body_2, acc))
+    body_ <- transform_rhs(rhs_, quote(..), op_)
 
-    #if (is_tee_pipe(op_) && length(l) > 1) {
     if (is_tee_pipe(op_)) {
-      body_ <- bquote({
-        .(prev_call)
-        .(next_call)
-      }, list(prev_call = body_,
-              next_call = transform_rhs(l[[2]]$rhs, quote(.), l[[2]]$op)))
-      body_2 <- call("function", as.pairlist(alist(.=)), body_)
+      body_2 <- call("function", as.pairlist(alist(..=)),
+                     call("{", body_, quote(..)))
       body_3 <- as.call(list(body_2, acc))
-      iter(l[-(1:2)], body_3)
+      iter(l[-1], body_3)
     } else {
+      body_2 <- call("function", as.pairlist(alist(..=)), body_)
+      body_3 <- as.call(list(body_2, acc))
       iter(l[-1], body_3)
     }
 
@@ -234,7 +237,7 @@ wrap_promise <- function(lst) {
 
 wrap_eager <- function(lst) {
 
-  iter2 <- function(l, sym_prev, acc = NULL) {
+  iter <- function(l, sym_prev, acc = NULL) {
     if (length(l) == 0) {
       return(acc)
     }
@@ -246,23 +249,23 @@ wrap_eager <- function(lst) {
 
     if (is_tee_pipe(op_)) {
       if (length(l) > 1) {
-        iter2(l[-1], sym_prev, c(acc, body_))
+        iter(l[-1], sym_prev, c(acc, body_))
       } else {
-        iter2(l[-1], NULL, c(acc, body_, sym_prev))
+        iter(l[-1], NULL, c(acc, body_, sym_prev))
       }
     } else {
       sym_new <- make_varname()
       if (length(l) > 1) {
-        iter2(l[-1], sym_new, c(acc, call("<-", sym_new, body_)))
+        iter(l[-1], sym_new, c(acc, call("<-", sym_new, body_)))
       } else {
-        iter2(l[-1], NULL, c(acc, body_))
+        iter(l[-1], NULL, c(acc, body_))
       }
     }
   }
 
   first_sym <- make_varname()
   first_assign <- call("<-", first_sym, lst[[1]]$rhs)
-  as.call(c(quote(`{`), iter2(lst[-1], first_sym, acc = first_assign)))
+  as.call(c(quote(`{`), iter(lst[-1], first_sym, acc = first_assign)))
 }
 
 replace_rhs_origin <- function(rhs, replace_sym) {
@@ -277,7 +280,7 @@ replace_rhs_origin <- function(rhs, replace_sym) {
 
 add_first_dot_to_rhs <- function(rhs, new_call) {
   ## rhs[[1]] should be passed recuresively
-  # > demagrittr(1 %>% (. %>% exp)(), as_lazy = TRUE)
+  # > demagrittr(1 %>% (. %>% exp)(), mode = "lazy")
   # (function(.) exp(.))(1)
   as.call(c(dig_ast(rhs[[1]]), new_call, as.list(rhs)[-1]))
 }
@@ -289,7 +292,7 @@ build_pipe_call <- function(expr, replace_sym, use_assign_sym = FALSE) {
   first_op <- lst[[2]]$op
   #browser()
   body_ <-
-    if (as_lazy) {
+    if (mode == "lazy") {
       if (is_pipe_lambda(origin, first_op)) {
         make_lambda_lazy(lst)
       } else if (is.null(replace_sym)) {
@@ -298,16 +301,27 @@ build_pipe_call <- function(expr, replace_sym, use_assign_sym = FALSE) {
         lst[[1]]$rhs <- replace_rhs_origin(origin, replace_sym)
         wrap_lazy(lst)
       }
-    } else {
+    } else if (mode == "eager") {
       # as eager
       if (is_pipe_lambda(origin, first_op)) {
-        make_lambda(lst)
+        make_lambda_eager(lst)
       } else if (is.null(replace_sym)) {
         wrap_eager(lst)
       } else {
         # this is called x %>% {(. + 1) %>% f}
         lst[[1]]$rhs <- replace_rhs_origin(origin, replace_sym)
         wrap_eager(lst)
+      }
+    } else {
+      # mode == "promise"
+      if (is_pipe_lambda(origin, first_op)) {
+        make_lambda_promise(lst)
+      } else if (is.null(replace_sym)) {
+        wrap_promise(lst)
+      } else {
+        # this is called x %>% {(. + 1) %>% f}
+        lst[[1]]$rhs <- replace_rhs_origin(origin, replace_sym)
+        wrap_promise(lst)
       }
     }
 

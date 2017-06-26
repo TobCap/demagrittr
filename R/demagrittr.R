@@ -20,10 +20,10 @@
 #' demagrittr(x %>% {f(y = nrow(.), z = ncol(.))})
 #'
 #' @export
-demagrittr <- function(expr, is_NSE = TRUE, as_lazy = FALSE) {
+demagrittr <- function(expr, is_NSE = TRUE, mode = c("eager", "lazy", "promise")) {
   ## Initialize variables that are used for side-effect purpose
-  init_(pf_ = parent.frame(), as_lazy = as_lazy)
-  on.exit({init_(pf_ = emptyenv(), as_lazy = FALSE)})
+  init_(pf_ = parent.frame(), mode = match.arg(mode))
+  on.exit({init_(pf_ = emptyenv(), mode = NULL)})
 
   e0 <- if (is_NSE) substitute(expr) else expr
 
