@@ -42,9 +42,13 @@ rm_tmp_symbols_if_exists <- function(env) {
 
 
 make_lambda <- function(body_, wrapper) {
-  arg_ <- as.vector(list(.. = quote(expr=)), "pairlist")
+  arg_ <- as_formals(quote(..))
   body_[[1]]$rhs <- quote(..)
   call("function", arg_, wrapper(body_))
+}
+
+as_formals <- function(sym, default_value = quote(expr=)) {
+   as.pairlist(setNames(list(default_value), as.character(sym)))
 }
 
 construct_lang_manipulation <- function(ifs_expr, env_ = parent.frame()) {
@@ -207,12 +211,12 @@ wrap_promise <- function(lst) {
     body_ <- transform_rhs(rhs_, quote(..), op_)
 
     if (is_tee_pipe(op_)) {
-      body_2 <- call("function", as.pairlist(alist(..=)),
+      body_2 <- call("function", as_formals(quote(..)),
                      call("{", body_, quote(..)))
       body_3 <- as.call(list(body_2, acc))
       iter(l[-1], body_3)
     } else {
-      body_2 <- call("function", as.pairlist(alist(..=)), body_)
+      body_2 <- call("function", as_formals(quote(..)), body_)
       body_3 <- as.call(list(body_2, acc))
       iter(l[-1], body_3)
     }
