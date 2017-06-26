@@ -284,8 +284,8 @@ replace_rhs_origin <- function(rhs, replace_sym) {
 
 add_first_dot_to_rhs <- function(rhs, new_call) {
   ## rhs[[1]] should be passed recuresively
-  # > demagrittr(1 %>% (. %>% exp)(), mode = "lazy")
-  # (function(.) exp(.))(1)
+  # > demagrittr(1 %>% (. %>% round(2))(), mode = "lazy")
+  # (function(..) round(.., 2))(1.2345) #-> 1.23
   as.call(c(dig_ast(rhs[[1]]), new_call, as.list(rhs)[-1]))
 }
 
