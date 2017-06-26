@@ -276,7 +276,7 @@ add_first_dot_to_rhs <- function(rhs, new_call) {
   as.call(c(dig_ast(rhs[[1]]), new_call, as.list(rhs)[-1]))
 }
 
-build_pipe_call <- function(expr, replace_sym, use_assign_sym = FALSE) {
+build_pipe_call <- function(expr, replace_sym) {
   # `lst` should have more than one element
   lst <- get_pipe_info(expr)
   origin <- lst[[1]]$rhs
@@ -289,7 +289,7 @@ build_pipe_call <- function(expr, replace_sym, use_assign_sym = FALSE) {
                     stop("The selected mode was invalid."))
   body_ <-
     if (is_pipe_lambda(origin, first_op)) {
-        make_lambda(lst, wrapper)
+      make_lambda(lst, wrapper)
     } else if (is.null(replace_sym)) {
       wrapper(lst)
     } else {
@@ -305,9 +305,9 @@ build_pipe_call <- function(expr, replace_sym, use_assign_sym = FALSE) {
 }
 
 get_pipe_info <- function(x, acc = NULL) {
-  # the most left-side of pipe-stream is needed to be recursively
-  # parsed by dig_ast()
   if (!is_magrittr_call(x)) {
+    # the most left-side of pipe-stream is needed to be recursively
+    # parsed by dig_ast()
     c(list(list(op = NULL, rhs = dig_ast(x))), acc)
   } else {
     get_pipe_info(x[[2]], c(list(list(op = x[[1]], rhs = x[[3]])), acc))
