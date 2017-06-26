@@ -208,15 +208,16 @@ wrap_promise <- function(lst) {
     rhs_ <- l[[1]]$rhs
     op_ <- l[[1]]$op
 
-    body_ <- transform_rhs(rhs_, quote(..), op_)
+    sym_new <- make_varname()
+    body_ <- transform_rhs(rhs_, sym_new, op_)
 
     if (is_tee_pipe(op_)) {
-      body_2 <- call("function", as_formals(quote(..)),
-                     call("{", body_, quote(..)))
+      body_2 <- call("function", as_formals(sym_new),
+                     call("{", body_, sym_new))
       body_3 <- as.call(list(body_2, acc))
       iter(l[-1], body_3)
     } else {
-      body_2 <- call("function", as_formals(quote(..)), body_)
+      body_2 <- call("function", as_formals(sym_new), body_)
       body_3 <- as.call(list(body_2, acc))
       iter(l[-1], body_3)
     }
