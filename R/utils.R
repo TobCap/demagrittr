@@ -40,25 +40,12 @@ rm_tmp_symbols_if_exists <- function(env) {
    , envir = env)
 }
 
-make_lambda_eager <- function(body_) {
-  arg_ <- as.vector(list(. = quote(expr=)), "pairlist")
-  call("function", arg_, wrap_eager(body_))
-}
 
-make_lambda_lazy <- function(body_) {
-  # change format from `.` to `..` to prevent recursive transform of `.`
-  # arg_ <- as.vector(list(. = quote(expr=)), "pairlist")
+make_lambda <- function(body_, wrapper) {
   arg_ <- as.vector(list(.. = quote(expr=)), "pairlist")
   body_[[1]]$rhs <- quote(..)
-  call("function", arg_, wrap_lazy(body_))
+  call("function", arg_, wrapper(body_))
 }
-
-make_lambda_promise <- function(body_) {
-  arg_ <- as.vector(list(. = quote(expr=)), "pairlist")
-  call("function", arg_, wrap_promise(body_))
-}
-
-
 
 construct_lang_manipulation <- function(ifs_expr, env_ = parent.frame()) {
   ifs <- substitute(ifs_expr)
@@ -294,7 +281,7 @@ build_pipe_call <- function(expr, replace_sym, use_assign_sym = FALSE) {
   body_ <-
     if (mode == "lazy") {
       if (is_pipe_lambda(origin, first_op)) {
-        make_lambda_lazy(lst)
+        make_lambda(lst, wrap_lazy)
       } else if (is.null(replace_sym)) {
         wrap_lazy(lst)
       } else {
@@ -304,7 +291,7 @@ build_pipe_call <- function(expr, replace_sym, use_assign_sym = FALSE) {
     } else if (mode == "eager") {
       # as eager
       if (is_pipe_lambda(origin, first_op)) {
-        make_lambda_eager(lst)
+        make_lambda(lst, wrap_eager)
       } else if (is.null(replace_sym)) {
         wrap_eager(lst)
       } else {
@@ -315,7 +302,7 @@ build_pipe_call <- function(expr, replace_sym, use_assign_sym = FALSE) {
     } else {
       # mode == "promise"
       if (is_pipe_lambda(origin, first_op)) {
-        make_lambda_promise(lst)
+        make_lambda(lst, wrap_promise)
       } else if (is.null(replace_sym)) {
         wrap_promise(lst)
       } else {
