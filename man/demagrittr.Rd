@@ -4,7 +4,7 @@
 \alias{demagrittr}
 \title{Decompile magrittr's syntax to normal R's syntax}
 \usage{
-demagrittr(expr, is_NSE = TRUE, as_lazy = FALSE)
+demagrittr(expr, is_NSE = TRUE, mode = c("eager", "lazy", "promise"))
 }
 \arguments{
 \item{expr}{expression with magrittr functions such as "\%>\%"}

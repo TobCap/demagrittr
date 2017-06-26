@@ -1,28 +1,29 @@
 # ops <- c("%>%", "%T>%", "%$%", "%<>%")
-# regexp_meta <- c(".", "\\", "|", "(", ")" , "[", "{", "^", "$", "*", "+", "?")
-# varname_prefix <- "#tmp"
+# regexp_meta <- c(".", "\\", "|", "(", ")", "[", "]", "{", "}",
+#                  "^", "$", "*", "+", "?")
+# varname_prefix <- "#"
 # devtools::use_data(ops, regexp_meta, varname_prefix,
 #                    internal=TRUE, overwrite = TRUE)
-pf_ <- NULL
-var_id <- 0L
-as_lazy <- FALSE
+
 utils::globalVariables(c("expr_", "iter_"))
 
-init_ <- function(pf_, as_lazy) {
+# initial values
+pf_ <- NULL
+var_id <- 0L
+mode <- NULL
+
+init_ <- function(pf_, mode) {
   pkg_env <- parent.env(environment()) # getNamespace("demagrittr")
 
   rm_tmp_symbols_if_exists(pf_)
   assign("var_id", 0L, envir = pkg_env)
-  assign("as_lazy", as_lazy, envir = pkg_env)
+  assign("mode", mode, envir = pkg_env)
   assign("pf_", pf_, envir = pkg_env)
 
   invisible()
 }
 
 make_varname <- function(prefix = varname_prefix) {
-  if (any(strsplit(prefix, "")[[1]] %in% regexp_meta)) {
-    stop("cannot use regexp_meta_char in `prefix` of make_varname()")
-  }
 
   new_name <- paste0(prefix, var_id)
   var_id <<- var_id + 1L
@@ -34,23 +35,32 @@ make_varname <- function(prefix = varname_prefix) {
   }
 }
 
+set_varname_prefix <- function(nm) {
+  stopifnot(length(nm) == 1, is.character(nm), isTRUE(nchar(nm) > 1))
+  pkg_env <- parent.env(environment()) # getNamespace("demagrittr")
+  assign("varname_prefix", nm, envir = pkg_env)
+}
+
 rm_tmp_symbols_if_exists <- function(env) {
-  rm(list = ls(pattern = paste0("^", varname_prefix, "*")
+  prefix_mod <- vapply(
+    strsplit(varname_prefix, "")[[1]],
+    function(x) if (x %in% regexp_meta) paste0("\\", x) else x,
+    character(1),
+    USE.NAMES = FALSE)
+
+  rm(list = ls(pattern = paste0("^", prefix_mod, "\\d+$")
    , envir = env, all.names = TRUE)
    , envir = env)
 }
 
-make_lambda <- function(body_) {
-  arg_ <- as.vector(list(. = quote(expr=)), "pairlist")
-  call("function", arg_, wrap(body_))
+make_lambda <- function(body_, wrapper) {
+  arg_ <- as_formals(quote(..))
+  body_[[1]]$rhs <- quote(..)
+  call("function", arg_, wrapper(body_))
 }
 
-make_lambda_lazy <- function(body_) {
-  # change format from `.` to `..` to prevent recursive transform of `.`
-  # arg_ <- as.vector(list(. = quote(expr=)), "pairlist")
-  arg_ <- as.vector(list(.. = quote(expr=)), "pairlist")
-  body_[[1]]$rhs <- quote(..)
-  call("function", arg_, wrap_lazy(body_))
+as_formals <- function(sym, default_value = quote(expr=)) {
+   as.pairlist(setNames(list(default_value), as.character(sym)))
 }
 
 construct_lang_manipulation <- function(ifs_expr, env_ = parent.frame()) {
@@ -150,45 +160,10 @@ get_rhs_paren <- function(rhs_, sym_prev) {
             rhs_mod[[1]] <- parse(text = deparse(rhs_mod[[1]], width.cutoff = 500L))[[1]]
           }
         }
-        build_pipe_call(call("%>%", sym_prev, rhs_mod), NULL)
+        call("(", build_pipe_call(call("%>%", sym_prev, rhs_mod), NULL))
       }
     , as.call(c(dig_ast(rhs_), sym_prev))
   )
-}
-
-
-
-wrap_lazy <- function(lst) {
-
-  iter <- function(l, acc) {
-    if (length(l) == 0) {
-      return(acc)
-    }
-
-    rhs_ <- l[[1]]$rhs
-    op_ <- l[[1]]$op
-
-    body_ <- transform_rhs(rhs_, acc, op_)
-
-    if (is_tee_pipe(op_)) {
-      call("{", build_pipe_call(call("%>%", acc, rhs_), NULL), iter(l[-1], acc))
-      # T_body <-  bquote({
-      #     .(prev_call)
-      #     .(next_call)
-      #   }, list(prev_call = build_pipe_call(call("%>%", quote(..), rhs_), NULL),
-      #           next_call = iter(l[-1], quote(..))
-      #           )
-      #   )
-      #
-      # as.call(c(call("(", call("function", as.pairlist(alist(..=)), T_body)), acc))
-
-    } else {
-      iter(l[-1], body_)
-    }
-
-  }
-  iter(lst[-1], lst[[1]]$rhs)
-
 }
 
 transform_rhs <- function(rhs_, lang_prev, op_) {
@@ -209,14 +184,66 @@ transform_rhs <- function(rhs_, lang_prev, op_) {
   } else {
     stop("missing pattern in transform_rhs()")
   }
+}
+
+
+wrap_lazy <- function(lst) {
+
+  iter <- function(l, acc) {
+    if (length(l) == 0) {
+      return(acc)
+    }
+
+    rhs_ <- l[[1]]$rhs
+    op_ <- l[[1]]$op
+
+    body_ <- transform_rhs(rhs_, acc, op_)
+
+    if (is_tee_pipe(op_)) {
+      call("{", build_pipe_call(call("%>%", acc, rhs_), NULL), iter(l[-1], acc))
+    } else {
+      iter(l[-1], body_)
+    }
+
+  }
+  iter(lst[-1], lst[[1]]$rhs)
 
 }
 
-wrap <- function(lst) {
+wrap_promise <- function(lst) {
 
-  iter2 <- function(l, sym_prev, acc = NULL) {
+  iter <- function(l, acc) {
     if (length(l) == 0) {
-      return(c(acc, sym_prev))
+      return(acc)
+    }
+
+    rhs_ <- l[[1]]$rhs
+    op_ <- l[[1]]$op
+
+    sym_new <- make_varname()
+    body_ <- transform_rhs(rhs_, sym_new, op_)
+
+    if (is_tee_pipe(op_)) {
+      body_2 <- call("function", as_formals(sym_new),
+                     call("{", body_, sym_new))
+      body_3 <- as.call(list(body_2, acc))
+      iter(l[-1], body_3)
+    } else {
+      body_2 <- call("function", as_formals(sym_new), body_)
+      body_3 <- as.call(list(body_2, acc))
+      iter(l[-1], body_3)
+    }
+
+  }
+  iter(lst[-1], lst[[1]]$rhs)
+
+}
+
+wrap_eager <- function(lst) {
+
+  iter <- function(l, sym_prev, acc = NULL) {
+    if (length(l) == 0) {
+      return(acc)
     }
 
     rhs_ <- l[[1]]$rhs
@@ -225,16 +252,24 @@ wrap <- function(lst) {
     body_ <- transform_rhs(rhs_, sym_prev, op_)
 
     if (is_tee_pipe(op_)) {
-      iter2(l[-1], sym_prev, c(acc, body_))
+      if (length(l) > 1) {
+        iter(l[-1], sym_prev, c(acc, body_))
+      } else {
+        iter(l[-1], NULL, c(acc, body_, sym_prev))
+      }
     } else {
       sym_new <- make_varname()
-      iter2(l[-1], sym_new, c(acc, call("<-", sym_new, body_)))
+      if (length(l) > 1) {
+        iter(l[-1], sym_new, c(acc, call("<-", sym_new, body_)))
+      } else {
+        iter(l[-1], NULL, c(acc, body_))
+      }
     }
   }
 
   first_sym <- make_varname()
   first_assign <- call("<-", first_sym, lst[[1]]$rhs)
-  as.call(c(quote(`{`), iter2(lst[-1], first_sym, acc = first_assign)))
+  as.call(c(quote(`{`), iter(lst[-1], first_sym, acc = first_assign)))
 }
 
 replace_rhs_origin <- function(rhs, replace_sym) {
@@ -249,38 +284,30 @@ replace_rhs_origin <- function(rhs, replace_sym) {
 
 add_first_dot_to_rhs <- function(rhs, new_call) {
   ## rhs[[1]] should be passed recuresively
-  # > demagrittr(1 %>% (. %>% exp)(), as_lazy = TRUE)
+  # > demagrittr(1 %>% (. %>% exp)(), mode = "lazy")
   # (function(.) exp(.))(1)
   as.call(c(dig_ast(rhs[[1]]), new_call, as.list(rhs)[-1]))
 }
 
-build_pipe_call <- function(expr, replace_sym, use_assign_sym = FALSE) {
+build_pipe_call <- function(expr, replace_sym) {
   # `lst` should have more than one element
   lst <- get_pipe_info(expr)
   origin <- lst[[1]]$rhs
   first_op <- lst[[2]]$op
 
+  wrapper <- switch(mode,
+                    "eager" = wrap_eager,
+                    "lazy" = wrap_lazy,
+                    "promise" = wrap_promise,
+                    stop("The selected mode was invalid."))
   body_ <-
-    if (as_lazy) {
-      if (is_pipe_lambda(origin, first_op)) {
-        make_lambda_lazy(lst)
-      } else if (is.null(replace_sym)) {
-        wrap_lazy(lst)
-      } else {
-        lst[[1]]$rhs <- replace_rhs_origin(origin, replace_sym)
-        wrap_lazy(lst)
-      }
+    if (is_pipe_lambda(origin, first_op)) {
+      make_lambda(lst, wrapper)
+    } else if (is.null(replace_sym)) {
+      wrapper(lst)
     } else {
-      # as eager
-      if (is_pipe_lambda(origin, first_op)) {
-        make_lambda(lst)
-      } else if (is.null(replace_sym)) {
-        wrap(lst)
-      } else {
-        # this is called x %>% {(. + 1) %>% f}
-        lst[[1]]$rhs <- replace_rhs_origin(origin, replace_sym)
-        wrap(lst)
-      }
+      lst[[1]]$rhs <- replace_rhs_origin(origin, replace_sym)
+      wrapper(lst)
     }
 
   if (is_compound_pipe(first_op)) {
@@ -291,9 +318,9 @@ build_pipe_call <- function(expr, replace_sym, use_assign_sym = FALSE) {
 }
 
 get_pipe_info <- function(x, acc = NULL) {
-  # the most left-side of pipe-stream is needed to be recursively
-  # parsed by dig_ast()
   if (!is_magrittr_call(x)) {
+    # the most left-side of pipe-stream is needed to be recursively
+    # parsed by dig_ast()
     c(list(list(op = NULL, rhs = dig_ast(x))), acc)
   } else {
     get_pipe_info(x[[2]], c(list(list(op = x[[1]], rhs = x[[3]])), acc))

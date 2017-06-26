@@ -2,18 +2,25 @@ context("magrittr-vignettes")
 suppressMessages(library("magrittr"))
 
 test_that("equiv value", {
-  test_demagrittr <- function(expr, eager = TRUE, lazy = TRUE) {
+  test_demagrittr <- function(expr, eager = TRUE, lazy = TRUE, promise = TRUE) {
     stopifnot(is.call(expr))
     pipes <- c("%>%", "%T>%", "%$%", "%<>%")
-    eager_eval <- demagrittr(expr, FALSE, as_lazy = FALSE)
-    lazy_eval <- demagrittr(expr, FALSE, as_lazy = TRUE)
+
+    mode_eager <- demagrittr(expr, FALSE, mode = "eager")
+    mode_lazy <- demagrittr(expr, FALSE, mode = "lazy")
+    mode_promise <- demagrittr(expr, FALSE, mode = "promise")
+
     if (eager) {
-      expect_identical(eval(expr), eval(eager_eval))
-      expect_false(any(all.names(eager_eval) %in% pipes))
+      expect_identical(eval(expr), eval(mode_eager))
+      expect_false(any(all.names(mode_eager) %in% pipes))
     }
     if (lazy) {
-      expect_identical(eval(expr), eval(lazy_eval))
-      expect_false(any(all.names(lazy_eval) %in% pipes))
+      expect_identical(eval(expr), eval(mode_lazy))
+      expect_false(any(all.names(mode_lazy) %in% pipes))
+    }
+    if (promise) {
+      expect_identical(eval(expr), eval(mode_promise))
+      expect_false(any(all.names(mode_promise) %in% pipes))
     }
   }
 
@@ -91,8 +98,6 @@ test_that("equiv value", {
       head(.)
     }
   })
-  expect_identical(eval(e6), eval(demagrittr(e6, FALSE)))
-  expect_identical(eval(e6), eval(demagrittr(e6, FALSE, as_lazy = TRUE)))
-
+  test_demagrittr(e6)
 
 })
