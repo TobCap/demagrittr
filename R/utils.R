@@ -1,12 +1,16 @@
 # ops <- c("%>%", "%T>%", "%$%", "%<>%")
-# regexp_meta <- c(".", "\\", "|", "(", ")" , "[", "{", "^", "$", "*", "+", "?")
-# varname_prefix <- "#tmp"
+# regexp_meta <- c(".", "\\", "|", "(", ")", "[", "]", "{", "}",
+#                  "^", "$", "*", "+", "?")
+# varname_prefix <- "#"
 # devtools::use_data(ops, regexp_meta, varname_prefix,
 #                    internal=TRUE, overwrite = TRUE)
+
+utils::globalVariables(c("expr_", "iter_"))
+
+# initial values
 pf_ <- NULL
 var_id <- 0L
 mode <- NULL
-utils::globalVariables(c("expr_", "iter_"))
 
 init_ <- function(pf_, mode) {
   pkg_env <- parent.env(environment()) # getNamespace("demagrittr")
@@ -20,9 +24,6 @@ init_ <- function(pf_, mode) {
 }
 
 make_varname <- function(prefix = varname_prefix) {
-  if (any(strsplit(prefix, "")[[1]] %in% regexp_meta)) {
-    stop("cannot use regexp_meta_char in `prefix` of make_varname()")
-  }
 
   new_name <- paste0(prefix, var_id)
   var_id <<- var_id + 1L
@@ -34,12 +35,23 @@ make_varname <- function(prefix = varname_prefix) {
   }
 }
 
+set_varname_prefix <- function(nm) {
+  stopifnot(length(nm) == 1, is.character(nm), isTRUE(nchar(nm) > 1))
+  pkg_env <- parent.env(environment()) # getNamespace("demagrittr")
+  assign("varname_prefix", nm, envir = pkg_env)
+}
+
 rm_tmp_symbols_if_exists <- function(env) {
-  rm(list = ls(pattern = paste0("^", varname_prefix, "*")
+  prefix_mod <- vapply(
+    strsplit(varname_prefix, "")[[1]],
+    function(x) if (x %in% regexp_meta) paste0("\\", x) else x,
+    character(1),
+    USE.NAMES = FALSE)
+
+  rm(list = ls(pattern = paste0("^", prefix_mod, "\\d+$")
    , envir = env, all.names = TRUE)
    , envir = env)
 }
-
 
 make_lambda <- function(body_, wrapper) {
   arg_ <- as_formals(quote(..))
