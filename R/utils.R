@@ -36,7 +36,7 @@ make_varname <- function(prefix = varname_prefix) {
 }
 
 set_varname_prefix <- function(nm) {
-  stopifnot(length(nm) == 1, is.character(nm), isTRUE(nchar(nm) > 1))
+  stopifnot(length(nm) == 1, is.character(nm), isTRUE(nchar(nm) > 0))
   pkg_env <- parent.env(environment()) # getNamespace("demagrittr")
   assign("varname_prefix", nm, envir = pkg_env)
 }
@@ -48,8 +48,8 @@ rm_tmp_symbols_if_exists <- function(env) {
     character(1),
     USE.NAMES = FALSE)
 
-  rm(list = ls(pattern = paste0("^", prefix_mod, "\\d+$")
-   , envir = env, all.names = TRUE)
+  rm(list = ls(pattern = paste0("^", paste0(prefix_mod, collapse = ""), "\\d+$")
+               , envir = env, all.names = TRUE)
    , envir = env)
 }
 
