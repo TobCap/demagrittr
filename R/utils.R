@@ -56,7 +56,7 @@ rm_tmp_symbols_if_exists <- function(env) {
 make_lambda <- function(body_, wrapper) {
   arg_ <- as_formals(quote(..))
   body_[[1]]$rhs <- quote(..)
-  call("function", arg_, wrapper(body_))
+  call("function", arg_, wrapper(body_), NULL)
 }
 
 as_formals <- function(sym, default_value = quote(expr=)) {
@@ -224,13 +224,18 @@ wrap_promise <- function(lst) {
     body_ <- transform_rhs(rhs_, sym_new, op_)
 
     if (is_tee_pipe(op_)) {
+      # The 4th NULL is required for compiler::compile()
       body_2 <- call("function", as_formals(sym_new),
-                     call("{", body_, sym_new))
-      body_3 <- as.call(list(body_2, acc))
+                     call("{", body_, sym_new), NULL)
+      # "(" is needed to be compatible with R's regular parse. See the next code.
+      # > .Internal(inspect(quote((function(x) x)(1))))
+      # > .Internal(inspect(
+      #     as.call(list(call("function", as.pairlist(alist(x=)), quote(x)), 1))))
+      body_3 <- as.call(list(call("(", body_2), acc))
       iter(l[-1], body_3)
     } else {
-      body_2 <- call("function", as_formals(sym_new), body_)
-      body_3 <- as.call(list(body_2, acc))
+      body_2 <- call("function", as_formals(sym_new), body_, NULL)
+      body_3 <- as.call(list(call("(", body_2), acc))
       iter(l[-1], body_3)
     }
 
