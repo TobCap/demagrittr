@@ -36,6 +36,19 @@ demagrittr <- function(expr, is_NSE = TRUE, mode = c("eager", "lazy", "promise")
     stop("type of expression is not supported")
   }
 
-  new_call <- dig_ast(e0)
-  new_call
+  if (!is_NSE && is.function(e0)) {
+    dig_func(e0)
+  } else {
+    dig_ast(e0)
+  }
+
+}
+
+dig_func <- function(e0) {
+  if (has_magrittr_ops(body(e0))) {
+    eval(call("function", formals(e0), dig_ast(body(e0)), attributes(e0)$srcref),
+         environment(e0), baseenv())
+  } else {
+    e0
+  }
 }
